@@ -246,6 +246,8 @@ void radio_host_task(void const * argument)
         
         if (gzll_get_rx_data_ready_pipe_number() == 2)
         {
+            // pload used to generate PPM
+            // 2 Bytes per unit, and changes slowly, so no need to be protect
             if (gzll_rx_fifo_read(pload, NULL, NULL))
             {
                 printf("pload:%d\r\n", *(uint16_t*)pload);
