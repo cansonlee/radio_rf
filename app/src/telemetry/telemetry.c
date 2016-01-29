@@ -22,6 +22,38 @@ bool waitting_for_heartbeat = true;
 uint32_t last_heart_beat_time;
 uint32_t heartbeat_cnt;
 
+static bool p_isFlying = false;
+
+// MAV_DATA_STREAM_RAW_SENSORS
+//   RAW_IMU
+//   SCALED_IMU2
+//   SCALED_IMU3
+//   SCALED_PRESSURE
+//   SCALED_PRESSURE2
+//   SENSOR_OFFSETS(#150 not common msg)
+// MAV_DATA_STREAM_EXTENDED_STATUS
+//   SYS_STATUS
+//   POWER_STATUS
+//   MISSION_CURRENT
+//   GPS_RAW_INT
+//   GPS_RTK(if rtk avalible)
+//   GPS2_RAW
+//   GPS2_RTK(if rtk avalible)
+//   NAV_CONTROLLER_OUTPUT
+//   FENCE_STATUS(#162 not common msg, only send when fence enabled) 
+// MAV_DATA_STREAM_RC_CHANNELS
+//   RC_CHANNELS_RAW
+//   RC_CHANNELS
+//   SERVO_OUTPUT_RAW
+// MAV_DATA_STREAM_POSITION
+//   GLOBAL_POSITION_INT
+//   LOCAL_POSITION_NED
+// MAV_DATA_STREAM_EXTRA1
+//   ATTITUDE
+//   AHRS2(#178 not common msg)
+//   PID_TUNING
+// MAV_DATA_STREAM_EXTRA2
+//   VFR_HUD
 uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 TELEMETRY_STREAM streams[] = 
 {
@@ -96,47 +128,67 @@ void telemetry_mavlink_proc(uint8_t c)
         switch (msg.msgid)
         {
             case MAVLINK_MSG_ID_HEARTBEAT:
+			{
                 heartbeat_cnt++;
                 mavlink_active = true;
                 target_system.sysid = msg.sysid;
                 target_system.compid = msg.compid;
-                last_heart_beat_time = timer_1ms;
+
+				telemetry.heartbeat.base_mode =
+					mavlink_msg_heartbeat_get_base_mode(&msg);
+				telemetry.heartbeat.custom_mode = 
+					mavlink_msg_heartbeat_get_custom_mode(&msg);
+				telemetry.heartbeat.type = 
+					mavlink_msg_heartbeat_get_type(&msg);
+				telemetry.heartbeat.system_status = 
+					mavlink_msg_heartbeat_get_system_status(&msg);
+
+				last_heart_beat_time = timer_1ms;
                 if (waitting_for_heartbeat)
                 {
                     request_send = true;
                 }
                 (void)osSemaphoreReleaseFromISR(telemetry_sema);
-                break;
-            case MAVLINK_MSG_ID_RAW_IMU:
-                telemetry.raw_imu.xgyro = mavlink_msg_raw_imu_get_xgyro(&msg);
-                telemetry.raw_imu.ygyro = mavlink_msg_raw_imu_get_ygyro(&msg);
-                telemetry.raw_imu.zgyro = mavlink_msg_raw_imu_get_zgyro(&msg);
-                telemetry.raw_imu.xacc  = mavlink_msg_raw_imu_get_xacc(&msg);
-                telemetry.raw_imu.yacc  = mavlink_msg_raw_imu_get_yacc(&msg);
-                telemetry.raw_imu.zacc  = mavlink_msg_raw_imu_get_zacc(&msg);
-                telemetry.raw_imu.xmag  = mavlink_msg_raw_imu_get_xmag(&msg);
-                telemetry.raw_imu.ymag  = mavlink_msg_raw_imu_get_ymag(&msg);
-                telemetry.raw_imu.zmag  = mavlink_msg_raw_imu_get_zmag(&msg);
-                break;
+            }
+            break;
             case MAVLINK_MSG_ID_SYS_STATUS:
-                telemetry.sys_status.voltage_battery = 
+            {
+				telemetry.sys_status.voltage_battery = 
                     mavlink_msg_sys_status_get_voltage_battery(&msg);
                 telemetry.sys_status.current_battery = 
                     mavlink_msg_sys_status_get_current_battery(&msg);
                 telemetry.sys_status.battery_remaining =
                     mavlink_msg_sys_status_get_battery_remaining(&msg);
-                break;
-            case MAVLINK_MSG_ID_ATTITUDE:
-                telemetry.attitude.roll  = mavlink_msg_attitude_get_roll(&msg);
-                telemetry.attitude.pitch = mavlink_msg_attitude_get_pitch(&msg);
-                telemetry.attitude.yaw   = mavlink_msg_attitude_get_yaw(&msg);
-                break;
-            case MAVLINK_MSG_ID_GPS_RAW_INT:
-                telemetry.gps_raw.lat = mavlink_msg_gps_raw_int_get_lat(&msg);
+            }
+			break;
+			case MAVLINK_MSG_ID_GPS_RAW_INT:
+            {
+				telemetry.gps_raw.lat = mavlink_msg_gps_raw_int_get_lat(&msg);
                 telemetry.gps_raw.lon = mavlink_msg_gps_raw_int_get_lon(&msg);
-                telemetry.gps_raw.alt = mavlink_msg_gps_raw_int_get_alt(&msg);
                 telemetry.gps_raw.fix_type = mavlink_msg_gps_raw_int_get_fix_type(&msg);
-                telemetry.gps_raw.satellites_visible = mavlink_msg_gps_raw_int_get_satellites_visible(&msg);
+                telemetry.gps_raw.satellites_visible = 
+					mavlink_msg_gps_raw_int_get_satellites_visible(&msg);
+			}
+			break;
+			case MAVLINK_MSG_ID_VFR_HUD:
+			{
+				telemetry.vfr_hud.alt = mavlink_msg_vfr_hud_get_alt(&msg);
+				telemetry.vfr_hud.heading = mavlink_msg_vfr_hud_get_heading(&msg);
+				telemetry.vfr_hud.throttle = mavlink_msg_vfr_hud_get_throttle(&msg);
+			}
+			break;
+			case MAVLINK_MSG_ID_ATTITUDE:
+            {
+				telemetry.attitude.roll  = mavlink_msg_attitude_get_roll(&msg);
+                telemetry.attitude.pitch = mavlink_msg_attitude_get_pitch(&msg);
+			}
+			break;
+            case MAVLINK_MSG_ID_RC_CHANNELS_RAW:
+			{
+				telemetry.rc_channels_raw.rssi = 
+					mavlink_msg_rc_channels_raw_get_rssi(&msg);
+			}
+			break;
             default:
                 break;
                 
@@ -179,29 +231,106 @@ void telemetry_data_request_read(void)
     return;
 }
 
+// armed/disarmed, is flying, flight mode
+// 3 Bytes
+uint8_t telemetry_push_mode(void* buf){
+    uint8_t arm_type = 0;
+	uint8_t* ptr = buf;
+    uint8_t len;
 
+    uint8_t status = 0;
+	bool isFlying = false;
+	uint8_t system_status = telemetry.heartbeat.system_status;
+
+    telemetry.heartbeat.system_status;
+
+	// arm/disarm
+    if (telemetry.heartbeat.base_mode & ((uint8_t)1<<6) == 0x40){
+	    status = 1; // armed
+	}
+	
+	// is flying
+    if (system_status == MAV_STATE.MAV_STATE_ACTIVE ||
+		 (p_isFlying && 
+		   (system_status == MAV_STATE.MAV_STATE_CRITICAL || 
+		    system_status == MAV_STATE.MAV_STATE_EMERGENCY)){
+	    // is flying now
+	    status |= 0x10;
+    }
+	
+	*ptr = status;
+    ptr += sizeof(uint8_t);
+    len = sizeof(uint8_t);
+	
+    // flight mode
+    *ptr = telemetry.heartbeat.type & 0x7F;
+	ptr += sizeof(uint8_t);
+    len = sizeof(uint8_t);
+
+	*ptr = (uint8_t)telemetry.heartbeat.custom_mode;
+	len += sizeof(uint8_t);
+
+	return len;
+}
+
+// 1 Byte
+uint8_t telemetry_push_throttle(void* buf){
+	*(uint8_t*)buf = (uint8_t)telemetry.vfr_hud.throttle;
+
+	return sizeof(uint8_t);
+}
+
+// 1 Byte
+uint8_t telemetry_push_rssi(void* buf){
+    *(uint8_t*)buf = (uint8_t)telemetry.rc_channels_raw.rssi;
+
+	return sizeof(uint8_t);
+}
+
+
+// battery
+// 5 Bytes
 uint8_t telemetry_push_volt_cur
 (
     void *buf
 )
 {
-    uint8_t *ptr = buf;
+    uint8_t* ptr = buf;
     uint8_t len;
-    
-    *(uint16_t*)ptr = telemetry.sys_status.voltage_battery;
+
+	memcpy(ptr, &telemetry.sys_status.voltage_battery, sizeof(uint16_t));
     ptr += sizeof(uint16_t);
     len = sizeof(uint16_t);
-    
-    *(int16_t*)ptr = telemetry.sys_status.current_battery;
+
+	memcpy(ptr, &telemetry.sys_status.current_battery, sizeof(int16_t));
     ptr += sizeof(int16_t);
     len += sizeof(int16_t);
-    
-    *(uint16_t*)ptr = telemetry.sys_status.battery_remaining;
-    len += sizeof(uint16_t);
+
+	memcpy(ptr, &telemetry.sys_status.battery_remaining, sizeof(int8_t));
+    len += sizeof(int8_t);
 
     return len;
 }
 
+// gps fix type and satellites num.
+// 2 Bytes
+uint8_t telemetry_push_gps_status(void *buf){
+    uint8_t *ptr = buf;
+    uint8_t len;
+    
+    *ptr = telemetry.gps_raw.fix_type;
+    ptr += sizeof(uint8_t);
+    len = sizeof(uint8_t);
+    
+    *ptr = telemetry.gps_raw.satellites_visible;
+    ptr += sizeof(uint8_t);
+    len = sizeof(uint8_t);
+
+    return len;
+}
+
+
+// 8 Bytes
 uint8_t telemetry_push_attitude
 (
     void *buf
@@ -209,19 +338,32 @@ uint8_t telemetry_push_attitude
 {
     uint8_t *ptr = buf;
     uint8_t len;
-    
-    *(float*)ptr = telemetry.attitude.roll;
+
+	memcpy(ptr, &telemetry.attitude.roll, sizeof(float));
     ptr += sizeof(float);
     len = sizeof(float);
-    
-    *(float*)ptr = telemetry.attitude.pitch;
-    ptr += sizeof(float);
-    len += sizeof(float);
-    
-    *(float*)ptr = telemetry.attitude.yaw;
+
+	memcpy(ptr, &telemetry.attitude.pitch, sizeof(float));
     len += sizeof(float);
 
     return len;
+}
+
+// heading 
+// 2 Bytes
+uint8_t telemetry_push_heading(void* buf){
+    telemetry.vfr_hud.heading;
+}
+
+// alt
+// 4 Bytes
+uint8_t telemetry_push_alt(void* buf){
+    telemetry.vfr_hud.alt;
+}
+
+// distance from home
+// 2 Bytes
+uint8_t telemetry_push_distance(void* buf){
 }
 
 void telemetry_process_task(void const *argument)
