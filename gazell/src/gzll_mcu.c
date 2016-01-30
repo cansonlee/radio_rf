@@ -32,15 +32,29 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     uint32_t flag;
-    if (GPIO_Pin == GPIO_PIN_1)
+#if defined (RADIO_CONF_PRX)
+    if (GPIO_Pin == GPIO_PIN_4)
     {
         dbg_exit1_int_cnt++;
         //flag = gzll_interupts_save();
         do
         {
             gzll_radio_isr_function();
-        } while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1) == GPIO_PIN_RESET);
+        } while(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == GPIO_PIN_RESET);
         //gzll_interupts_restore(flag);
     }
+#else
+	if (GPIO_Pin == GPIO_PIN_0)
+	{
+		dbg_exit1_int_cnt++;
+		//flag = gzll_interupts_save();
+		do
+		{
+			gzll_radio_isr_function();
+		} while(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == GPIO_PIN_RESET);
+		//gzll_interupts_restore(flag);
+	}
+
+#endif
 }
 

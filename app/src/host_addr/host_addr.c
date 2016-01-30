@@ -11,11 +11,11 @@ int32_t host_addr_init(void)
     int32_t ret;
     I2C_WIRE_STRU i2c_wire;
 
-    i2c_wire.scl.port = GPIOC;
-    i2c_wire.scl.port_num = GPIO_PIN_12;
+    i2c_wire.scl.port = GPIOB;
+    i2c_wire.scl.port_num = GPIO_PIN_6;
     
-    i2c_wire.sda.port = GPIOC;
-    i2c_wire.sda.port_num = GPIO_PIN_11;
+    i2c_wire.sda.port = GPIOB;
+    i2c_wire.sda.port_num = GPIO_PIN_7;
     ret = i2c_init(&host_addr_i2c, &i2c_wire);
     if (I2C_RET_OK != ret)
     {

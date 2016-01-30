@@ -384,7 +384,7 @@ void pcm_decode_process(uint16_t width, uint8_t status)
                     if (pcm.crc_calc == pcm.crc)
                     {
                         memcpy(&pcm.frame, &g_frame_tmp, PCM_PPM_MAX);
-                        pcm_channel_get(&g_frame_tmp.ppm_value, pcm.channel);
+                        pcm_channel_get(g_frame_tmp.ppm_value, pcm.channel);
                         pcm.frame_success++;
                         radio_active();
                     }

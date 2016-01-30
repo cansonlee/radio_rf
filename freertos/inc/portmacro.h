@@ -154,7 +154,7 @@ not necessary for to use this port.  They are defined so the common demo files
 #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
 
 	/* Generic helper function. */
-	__attribute__( ( always_inline ) ) static inline uint8_t ucPortCountLeadingZeros( uint32_t ulBitmap )
+	static inline uint8_t ucPortCountLeadingZeros( uint32_t ulBitmap )
 	{
 	uint8_t ucReturn;
 

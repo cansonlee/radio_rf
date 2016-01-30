@@ -32,7 +32,7 @@ void eeprom_write_byte
 
 	txbuf[0] = addr;
 	txbuf[1] = byte;
-    i2c_master_transmit(i2c, slave_addr, &txbuf, 2, NULL, 0);
+    i2c_master_transmit(i2c, slave_addr, txbuf, 2, NULL, 0);
     osDelay(2);
 	return;
 }

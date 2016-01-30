@@ -44,6 +44,7 @@
 #include "hal_lcd.h"
 #include "pcm_decoder.h"
 #include "key.h"
+#include "Main_transmit.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -53,11 +54,14 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim8;
+//TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart3;
+
 
 osThreadId defaultTaskHandle;
 
@@ -113,6 +117,7 @@ int main(void)
     pcm_decoder_init();
     MX_TIM3_Init();
     MX_USART1_UART_Init();
+	MX_USART3_UART_Init();
 
     /* USER CODE BEGIN 2 */
 
@@ -130,7 +135,7 @@ int main(void)
     /* start timers, add new ones, ... */
     /* USER CODE END RTOS_TIMERS */
     
-    key_init();
+//    key_init();		//no need for transmiter--leon
     __enable_irq();
     (void)radio_device_init();
 
@@ -209,6 +214,23 @@ void MX_USART1_UART_Init(void)
 
 }
 
+/* USART3 init function */
+void MX_USART3_UART_Init(void)
+{
+
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  HAL_UART_Init(&huart3);
+
+}
+
+
 /** Pinout Configuration
 */
 void MX_GPIO_Init(void)
@@ -217,65 +239,68 @@ void MX_GPIO_Init(void)
     
     /* GPIO Ports Clock Enable */
     __GPIOA_CLK_ENABLE();
-    __GPIOC_CLK_ENABLE();
-    __GPIOD_CLK_ENABLE();
     __GPIOB_CLK_ENABLE();
 
-    /* LED 0 */
+    /* HEART_BEAT_PIN */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Pin = HEART_BEAT_PIN;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(HEART_BEAT_PORT, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(HEART_BEAT_PORT, HEART_BEAT_PIN, GPIO_PIN_SET);
+
+    HAL_GPIO_WritePin(SPORT_ON_PORT, SPORT_ON_PIN, GPIO_PIN_SET);		//默认SPORT接口为发送状态
+
+	/* SPORT_TX_PIN */
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;		//UART3_TX
+    GPIO_InitStruct.Pin = SPORT_TX_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(SPORT_TR_PORT, &GPIO_InitStruct);
+
+	/* SPORT_RX_PIN */
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;		//UART3_RX
+    GPIO_InitStruct.Pin = SPORT_RX_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(SPORT_TR_PORT, &GPIO_InitStruct);
     
     /* NRF_IRQ */
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-    GPIO_InitStruct.Pin = GPIO_PIN_1;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    /* NRF_CE */
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3| GPIO_PIN_4;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    /* NRF_CS */
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_4;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(GPIOA, 
-        GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4, GPIO_PIN_SET);
-
-    HAL_NVIC_SetPriority(EXTI1_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 0);
-    HAL_NVIC_EnableIRQ(EXTI1_IRQn);
-
-    /* LCD D0-D15 */
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_All;
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_All, GPIO_PIN_SET);    
-
-    /* PC6-PC10*/
+    /* NRF_CE */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10;
+    GPIO_InitStruct.Pin = GPIO_PIN_1;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10, 
-        GPIO_PIN_SET);
+	/* NRF_SPI */
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pin =  GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	/* NRF_CS */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_SET);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+
+    HAL_NVIC_SetPriority(EXTI0_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 0);
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
         
     return;
 }
@@ -393,11 +418,11 @@ void StartDefaultTask(void const * argument)
     /* USER CODE BEGIN 5 */
     osDelay(1);
 
-    LCD_Init();
-    LCD_Clear(BLUE);
+//    LCD_Init();
+//    LCD_Clear(BLUE);
 
-    POINT_COLOR=RED;
-    LCD_ShowString(30,40,200,24,24,"Mini STM32 ^_^");    
+//    POINT_COLOR=RED;
+//    LCD_ShowString(30,40,200,24,24,"Mini STM32 ^_^");    
 
     /* enable TIM2 capture interrupt */
     HAL_NVIC_EnableIRQ(TIM2_IRQn);
@@ -407,72 +432,7 @@ void StartDefaultTask(void const * argument)
     for(;;)
     {
         osDelay(100);
-        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-        //pcm_channel_show();
-
-        switch(key_scan(0))
-        {
-            case KEY0_PRES:
-                menu_idx++;
-                if (menu_idx == 10)
-                {
-                    menu_idx = 0;
-                }
-
-                printf("menu idx %d.\r\n", menu_idx);
-                break;
-            case KEY1_PRES:
-                switch (menu_idx)
-                {
-                    case 0:
-                        pcm_frame_show();
-                        break;
-                    case 1:
-                        pcm_decoder_start();
-                        break;
-                    case 2:
-                        pcm_decoder_stop();
-                        break;
-                    case 3:
-                        pcm_decoder_reset();
-                        break;
-                    case 4:
-                        pcm_dbg_decode_step();
-                        break;
-                    case 5:
-                        pcm_channel_show();
-                        break;
-                    case 6:
-                        pairing_list_entry_show(3);
-                        break;
-                    case 7:
-                        pairing_list_addr_write(3, test_addr);
-                        break;
-                    case 8:
-                        i2c_dbg_sda_in();
-                        printf("CRL:0x%08x, CRH:0x%08x\r\n", GPIOC->CRL, GPIOC->CRH);
-                        break;
-                    case 9:
-                        i2c_dbg_sda_out();
-                        printf("CRL:0x%08x, CRH:0x%08x\r\n", GPIOC->CRL, GPIOC->CRH);
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            default:
-                break;
-        }
-#if 0
-        printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d, primask:%d\r\n", 
-        dbg_exit1_int_cnt, dbg_tim3_int_cnt, dbg_int_max_rt, dbg_int_tx_ds,
-        dbg_int_rx_dr, dbg_irq_flag, gzll_sync_on, __get_PRIMASK());
-
-        //printf("rx poried:%d, isr_max_tick:%d, min_tick:%d, tx_retry:%d\r\n", 
-        //dbg_rx_period, dbg_isr_max_tick, dbg_isr_min_tick, dbg_tx_retrans);
-        printf("pairing_status:%d, sys_addr:0x%x%x%x%x\r\n", pairing_ok, gzp_system_address[0], 
-        gzp_system_address[1], gzp_system_address[2], gzp_system_address[3]);
-#endif
+        HAL_GPIO_TogglePin(HEART_BEAT_PORT, HEART_BEAT_PIN);
     }
 
     /* USER CODE END 5 */ 
@@ -503,9 +463,9 @@ void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
     PPM_ENCODER ppm;
     uint16_t dummy;
     
-    if (htim->Instance == TIM8)
+    if (htim->Instance == TIM1)
     {
-        //printf("T8 UP\r\n");
+        //printf("T1 UP\r\n");
         #if 1
         __HAL_TIM_CLEAR_IT(htim, TIM_SR_UIF);
         htim->Instance->ARR = *p_ppm_pulse_seqence;

@@ -11,7 +11,7 @@ extern uint32_t timer_1ms;
 mavlink_system_t mavlink_system = {20, 3, 0, 0 ,0 ,0};
 mavlink_system_t target_system;
 
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 TELEMETRY_DATA telemetry;
 osSemaphoreId telemetry_sema;
 osThreadId telemetryTaskHandle;
@@ -35,15 +35,15 @@ TELEMETRY_STREAM streams[] =
 
 uint32_t streams_max = sizeof(streams) / sizeof(streams[0]);
 
-void telemetry_uart2_init(void);
+void telemetry_uart3_init(void);
 void telemetry_process_task(void const *argument);
 void telemetry_mavlink_proc(uint8_t c);
 void telemetry_data_request_read(void);
-void USART2_IRQHandler(void);
+void USART3_IRQHandler(void);
 
 int32_t telemetry_init(void)
 {
-    telemetry_uart2_init();
+    telemetry_uart3_init();
     
     osSemaphoreDef(TELEMETRY_SEM);
     telemetry_sema = osSemaphoreEmptyCreate(osSemaphore(TELEMETRY_SEM));
@@ -63,25 +63,25 @@ int32_t telemetry_init(void)
         return -1;        
     }
 
-    HAL_NVIC_SetPriority(USART2_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
-    HAL_NVIC_EnableIRQ(USART2_IRQn);
+    HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
+    HAL_NVIC_EnableIRQ(USART3_IRQn);
     
     return 0;
 }
 
-/* USART2 init function */
-void telemetry_uart2_init(void)
+/* USART3 init function */
+void telemetry_uart3_init(void)
 {
 
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 57600;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_UART_Init(&huart2);
+    huart3.Instance = USART3;
+    huart3.Init.BaudRate = 57600;
+    huart3.Init.WordLength = UART_WORDLENGTH_8B;
+    huart3.Init.StopBits = UART_STOPBITS_1;
+    huart3.Init.Parity = UART_PARITY_NONE;
+    huart3.Init.Mode = UART_MODE_TX_RX;
+    huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+    HAL_UART_Init(&huart3);
 
     return;
 }
@@ -148,12 +148,12 @@ void telemetry_mavlink_proc(uint8_t c)
     return;
 }
 
-void USART2_IRQHandler(void)
+void USART3_IRQHandler(void)
 {
     uint8_t c;
-    if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != RESET)
+    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) != RESET)
     {
-        c = huart2.Instance->DR;
+        c = huart3.Instance->DR;
         //printf("0x%x \r\n", c);
         telemetry_mavlink_proc(c);
     }
@@ -173,7 +173,7 @@ void telemetry_data_request_read(void)
             
         len = mavlink_msg_to_send_buffer(buf, &msg);
 
-        HAL_UART_Transmit(&huart2, buf, len, 5000);
+        HAL_UART_Transmit(&huart3, buf, len, 5000);
     }
 
     return;
@@ -229,7 +229,7 @@ void telemetry_process_task(void const *argument)
     uint32_t i;
     argument = argument;
     
-    __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
+    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
 
     for (;;)
     {
