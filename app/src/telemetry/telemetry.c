@@ -231,6 +231,15 @@ void telemetry_data_request_read(void)
     return;
 }
 
+void telemetry_data_encode_lock(void){
+	__HAL_UART_DISABLE(&huart2);
+}
+
+void telemetry_data_encode_unlock(void){
+	__HAL_UART_ENABLE(&huart2);
+}
+
+
 uint8_t telemetry_data_encode(void* out_buf){    
 	uint8_t* ptr = out_buf;
 	uint8_t len = 0;
@@ -241,11 +250,15 @@ uint8_t telemetry_data_encode(void* out_buf){
 	len += telemetry_push_data(&out_buf, telemetry_push_gps_status); // 2 Bytes
 	
     // need protect
+    telemetry_data_encode_lock();
 	len += telemetry_push_data(&out_buf, telemetry_push_volt_cur);   // 5 Bytes
 	len += telemetry_push_data(&out_buf, telemetry_push_attitude);   // 8 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_heading);    // 2 Bytes
 	len += telemetry_push_data(&out_buf, telemetry_push_alt);        // 4 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_distance);   // 2 Bytes
+    telemetry_data_encode_unlock();
+
+	return len;
 }
 
 uint8_t telemetry_push_data(void** out_buf, uint8_t (*pFunc)(void*)){

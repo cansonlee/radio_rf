@@ -252,9 +252,15 @@ void radio_host_task(void const * argument)
                 memset(ack_pload, 0, RF_PAYLOAD_LENGTH);
 
 			    telemetry_data_encode(ack_pload);
-  
-                //printf("roll %f, pitch %f, yaw %f\r\n", ToDeg(*(float*)&ack_pload[6]), 
-                    //ToDeg(*(float*)&ack_pload[10]), ToDeg(*(float*)&ack_pload[14]));
+
+                float roll, pitch, alt;
+
+				memcpy(&roll, &ack_pload[11], sizeof(float));
+				memcpy(&pitch, &ack_pload[15], sizeof(float));
+                memcpy(&alt, &ack_pload[21], sizeof(float));
+
+				printf("roll %f, pitch %f, alt %f\r\n", ToDeg(roll), ToDeg(pitch), ToDeg(alt));
+				
                 gzll_ack_payload_write(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH, 2);
             }
         }
