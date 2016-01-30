@@ -57,10 +57,10 @@ static bool p_isFlying = false;
 uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 TELEMETRY_STREAM streams[] = 
 {
-    {MAV_DATA_STREAM_RAW_SENSORS,          2},
+    //{MAV_DATA_STREAM_RAW_SENSORS,          2},
     {MAV_DATA_STREAM_EXTENDED_STATUS,      2},
     {MAV_DATA_STREAM_RC_CHANNELS,          5},
-    {MAV_DATA_STREAM_POSITION,             2},
+    //{MAV_DATA_STREAM_POSITION,             2},
     {MAV_DATA_STREAM_EXTRA1,               5},
     {MAV_DATA_STREAM_EXTRA2,               2}
 };
@@ -231,40 +231,52 @@ void telemetry_data_request_read(void)
     return;
 }
 
-// armed/disarmed, is flying, flight mode
-// 3 Bytes
+uint8_t telemetry_data_encode(void* out_buf){    
+	uint8_t* ptr = out_buf;
+	uint8_t len = 0;
+
+	len += telemetry_push_data(&out_buf, telemetry_push_mode);       // 2 Bytes
+	len += telemetry_push_data(&out_buf, telemetry_push_throttle);   // 1 Byte
+	len += telemetry_push_data(&out_buf, telemetry_push_rssi);       // 1 Byte
+	len += telemetry_push_data(&out_buf, telemetry_push_gps_status); // 2 Bytes
+	
+    // need protect
+	len += telemetry_push_data(&out_buf, telemetry_push_volt_cur);   // 5 Bytes
+	len += telemetry_push_data(&out_buf, telemetry_push_attitude);   // 8 Bytes
+    len += telemetry_push_data(&out_buf, telemetry_push_heading);    // 2 Bytes
+	len += telemetry_push_data(&out_buf, telemetry_push_alt);        // 4 Bytes
+    len += telemetry_push_data(&out_buf, telemetry_push_distance);   // 2 Bytes
+}
+
+uint8_t telemetry_push_data(void** out_buf, uint8_t (*pFunc)(void*)){
+    uint8_t* buf = *out_buf;
+
+	len = pFunc(buf);
+	buf += len;
+
+	return len;
+}
+
+// armed/disarmed :1 
+// type           :7 
+// flight mode
+//  2 Bytes
 uint8_t telemetry_push_mode(void* buf){
-    uint8_t arm_type = 0;
-	uint8_t* ptr = buf;
+    uint8_t* ptr = buf;
     uint8_t len;
 
     uint8_t status = 0;
-	bool isFlying = false;
-	uint8_t system_status = telemetry.heartbeat.system_status;
-
-    telemetry.heartbeat.system_status;
-
+	uint8_t armed_mask = ((uint8_t)1<<6);
+	 
 	// arm/disarm
-    if (telemetry.heartbeat.base_mode & ((uint8_t)1<<6) == 0x40){
-	    status = 1; // armed
+    if (telemetry.heartbeat.base_mode & armed_mask== armed_mask){
+	    status = 0x80; // armed
 	}
 	
-	// is flying
-    if (system_status == MAV_STATE.MAV_STATE_ACTIVE ||
-		 (p_isFlying && 
-		   (system_status == MAV_STATE.MAV_STATE_CRITICAL || 
-		    system_status == MAV_STATE.MAV_STATE_EMERGENCY)){
-	    // is flying now
-	    status |= 0x10;
-    }
+	status |= telemetry.heartbeat.type & 0x7F;
 	
 	*ptr = status;
     ptr += sizeof(uint8_t);
-    len = sizeof(uint8_t);
-	
-    // flight mode
-    *ptr = telemetry.heartbeat.type & 0x7F;
-	ptr += sizeof(uint8_t);
     len = sizeof(uint8_t);
 
 	*ptr = (uint8_t)telemetry.heartbeat.custom_mode;
@@ -288,7 +300,6 @@ uint8_t telemetry_push_rssi(void* buf){
 }
 
 
-// battery
 // 5 Bytes
 uint8_t telemetry_push_volt_cur
 (
@@ -303,14 +314,15 @@ uint8_t telemetry_push_volt_cur
     len = sizeof(uint16_t);
 
 	memcpy(ptr, &telemetry.sys_status.current_battery, sizeof(int16_t));
-    ptr += sizeof(int16_t);
+	ptr += sizeof(int16_t);
     len += sizeof(int16_t);
 
-	memcpy(ptr, &telemetry.sys_status.battery_remaining, sizeof(int8_t));
-    len += sizeof(int8_t);
+	*(int8_t)ptr = telemetry.sys_status.battery_remaining;
+	len += sizeof(int8_t);
 
     return len;
 }
+
 
 // gps fix type and satellites num.
 // 2 Bytes
@@ -323,8 +335,7 @@ uint8_t telemetry_push_gps_status(void *buf){
     len = sizeof(uint8_t);
     
     *ptr = telemetry.gps_raw.satellites_visible;
-    ptr += sizeof(uint8_t);
-    len = sizeof(uint8_t);
+    len += sizeof(uint8_t);
 
     return len;
 }
@@ -349,22 +360,29 @@ uint8_t telemetry_push_attitude
     return len;
 }
 
-// heading 
 // 2 Bytes
 uint8_t telemetry_push_heading(void* buf){
-    telemetry.vfr_hud.heading;
+
+	memcpy(buf, &telemetry.vfr_hud.heading, sizeof(int16_t));
+	
+	return sizeof(int16_t);
 }
 
-// alt
 // 4 Bytes
 uint8_t telemetry_push_alt(void* buf){
-    telemetry.vfr_hud.alt;
+
+	memcpy(buf, &telemetry.vfr_hud.alt, sizeof(float));
+	
+	return sizeof(float);
 }
 
 // distance from home
 // 2 Bytes
 uint8_t telemetry_push_distance(void* buf){
 }
+
+// flight time
+// 4 Bytes
 
 void telemetry_process_task(void const *argument)
 {

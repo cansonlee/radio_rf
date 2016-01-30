@@ -199,9 +199,7 @@ void radio_pairing_status_set(bool status)
 
 void radio_host_task(void const * argument)
 {
-    uint8_t *ptr;
-    uint8_t len;
-    argument = argument;
+   argument = argument;
 
     gzll_init();
     gzp_init();
@@ -252,12 +250,8 @@ void radio_host_task(void const * argument)
             {
                 printf("pload:%d\r\n", *(uint16_t*)pload);
                 memset(ack_pload, 0, RF_PAYLOAD_LENGTH);
-               
-                ptr = ack_pload;
-                len = telemetry_push_volt_cur(ack_pload);
-                ptr += len;
-                
-                len = telemetry_push_attitude(ptr);
+
+			    telemetry_data_encode(ack_pload);
   
                 //printf("roll %f, pitch %f, yaw %f\r\n", ToDeg(*(float*)&ack_pload[6]), 
                     //ToDeg(*(float*)&ack_pload[10]), ToDeg(*(float*)&ack_pload[14]));
