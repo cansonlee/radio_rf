@@ -57,7 +57,7 @@
 CONFIG_ARCH = CORTEXM3
 include ./makefiles/toolchain.mk
 
-RADIO_TYPE = PTX
+RADIO_TYPE = PRX
 
 # The pre-processor and compiler options.
 MY_CFLAGS =
@@ -121,7 +121,7 @@ INCDIRS  = -I./freertos/inc \
            -I./drivers/led 
 
 # The ld scripts
-LDSCRIPT = ./script/STM32F103XE_FLASH.ld
+LDSCRIPT = ./script/STM32F103XB_FLASH.ld
  
 # The executable file name.
 # If not specified, current directory name or `a.out' will be used.

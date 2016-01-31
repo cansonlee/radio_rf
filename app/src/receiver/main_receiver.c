@@ -45,6 +45,7 @@
 #include "key.h"
 #include "host_addr.h"
 #include "led.h"
+#include "Main_receiver.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -54,9 +55,10 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim8;
+//TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 
@@ -68,6 +70,7 @@ uint16_t last_edge;
 uint16_t width;
 uint16_t ppm_pulse_seqence[20];
 uint16_t *p_ppm_pulse_seqence;
+uint16_t currentPpmChannel;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -79,7 +82,7 @@ void SystemClock_Config(void);
 static void MX_SPI1_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM8_Init(void);
+static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim);
@@ -111,10 +114,9 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_SPI1_Init();
-    //MX_TIM2_Init();
+	MX_TIM1_Init();
     MX_TIM3_Init();
     MX_USART1_UART_Init();
-    MX_TIM8_Init();
 
     /* USER CODE BEGIN 2 */
 
@@ -226,47 +228,124 @@ void MX_GPIO_Init(void)
     
     /* GPIO Ports Clock Enable */
     __GPIOA_CLK_ENABLE();
-    __GPIOC_CLK_ENABLE();
-    __GPIOD_CLK_ENABLE();
+	__GPIOB_CLK_ENABLE();
 
-    /* LED 0 */
+    /* PPM CH1 */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Pin = PPM_CH1_PIN;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(PPM_CH1_PORT, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(PPM_CH1_PORT, PPM_CH1_PIN, GPIO_PIN_RESET);
+
+	/* PPM CH2 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH2_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH2_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH2_PORT, PPM_CH2_PIN, GPIO_PIN_SET);
+
+	/* PPM CH3 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH3_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH3_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH3_PORT, PPM_CH3_PIN, GPIO_PIN_RESET);
+
+	/* PPM CH4 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH4_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH4_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH4_PORT, PPM_CH4_PIN, GPIO_PIN_RESET);
+
+	/* PPM CH5 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH5_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH5_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH5_PORT, PPM_CH5_PIN, GPIO_PIN_RESET);
+
+	/* PPM CH6 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH6_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH6_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH6_PIN, PPM_CH6_PIN, GPIO_PIN_RESET);
+
+	/* PPM CH7 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH7_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH7_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH7_PORT, PPM_CH7_PIN, GPIO_PIN_RESET);
+
+	/* PPM CH8 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = PPM_CH8_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_CH8_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_CH8_PORT, PPM_CH8_PIN, GPIO_PIN_RESET);
+
+	/* PPM SBUS */
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pin = PPM_SBUS_PIN;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(PPM_SBUS_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(PPM_SBUS_PORT, PPM_SBUS_PIN, GPIO_PIN_RESET);
 
     /* NRF_IRQ */
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-    GPIO_InitStruct.Pin = GPIO_PIN_1;
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     /* NRF_CE */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3| GPIO_PIN_4;
+    GPIO_InitStruct.Pin = GPIO_PIN_5;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	/* NRF_SPI */
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pin =  GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	
 
     /* NRF_CS */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pin = GPIO_PIN_4;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(GPIOA, 
-        GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_SET);
 
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
 
-    HAL_NVIC_SetPriority(EXTI1_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 0);
-    HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+    HAL_NVIC_SetPriority(EXTI4_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 0);
+    HAL_NVIC_EnableIRQ(EXTI4_IRQn);
     
     return;
 }
@@ -319,8 +398,8 @@ void MX_TIM3_Init(void)
     HAL_TIM_Base_Start_IT(&htim3);
 }
 
-/* TIM8 init function */
-void MX_TIM8_Init(void)
+/* TIM4 init function */
+void MX_TIM1_Init(void)
 {
     PPM_ENCODER ppm;
     uint16_t ppm_last_low_width;
@@ -334,40 +413,42 @@ void MX_TIM8_Init(void)
 
     for (i = 0; i < 16; i++)
     {
-        printf("encode ppm chan %02d PWM %04d\r\n", i, ppm_pulse_seqence[i]);
+        printf("encoa de ppm chan %02d PWM %04d\r\n", i, ppm_pulse_seqence[i]);
     }
 
     printf("ppm_last_low_width %d\r\n", ppm_last_low_width);
 
 
-    htim8.Instance = TIM8;
-    htim8.Init.Prescaler = 72 - 1;  /* 1MHz  */
-    htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim8.Init.Period = *p_ppm_pulse_seqence;
+    htim1.Instance = TIM1;
+    htim1.Init.Prescaler = 72 - 1;  /* 1MHz  */
+    htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim1.Init.Period = *p_ppm_pulse_seqence;
     p_ppm_pulse_seqence++;
-    htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim8.Init.RepetitionCounter = 0;
-    HAL_TIM_Base_Init(&htim8);
+    htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    htim1.Init.RepetitionCounter = 0;
+    HAL_TIM_Base_Init(&htim1);
 
-    htim8.Instance->CCR2 = 1000;
-    htim8.Instance->CR1 &= ~TIM_CR1_CEN;
+    htim1.Instance->CCR2 = 1000;
+    htim1.Instance->CR1 &= ~TIM_CR1_CEN;
     
-    htim8.Instance->CCER = TIM_CCER_CC1E;
-    htim8.Instance->CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC2PE;
-    htim8.Instance->CCR1 = PPM_STOP_PULSE_WIDTH;
-    htim8.Instance->BDTR = TIM_BDTR_MOE;
-    htim8.Instance->EGR = 1;
-    htim8.Instance->DIER = TIM_DIER_UDE;
+    htim1.Instance->CCER = TIM_CCER_CC1E;
+    htim1.Instance->CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC2PE;
+    htim1.Instance->CCR1 = PPM_STOP_PULSE_WIDTH;
+    htim1.Instance->BDTR = TIM_BDTR_MOE;
+    htim1.Instance->EGR = 1;
+    htim1.Instance->DIER = TIM_DIER_UDE;
 
-    htim8.Instance->SR &= ~TIM_SR_UIF;
-    htim8.Instance->SR &= ~TIM_SR_CC2IF;
-    htim8.Instance->DIER |= TIM_DIER_CC2IE;
-    htim8.Instance->DIER |= TIM_DIER_UIE;
+    htim1.Instance->SR &= ~TIM_SR_UIF;
+    htim1.Instance->SR &= ~TIM_SR_CC2IF;
+    htim1.Instance->DIER |= TIM_DIER_CC2IE;
+    htim1.Instance->DIER |= TIM_DIER_UIE;
     
-    htim8.Instance->CR1 = TIM_CR1_CEN;
+    htim1.Instance->CR1 = TIM_CR1_CEN;
+	currentPpmChannel = 0;
+	HAL_GPIO_WritePin(PPM_CH1_PORT, PPM_CH1_PIN, GPIO_PIN_SET);
 
-    HAL_NVIC_SetPriority(TIM8_UP_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1, 0);
-    HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
+    HAL_NVIC_SetPriority(TIM1_UP_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1, 0);
+    HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -392,18 +473,12 @@ void StartDefaultTask(void const * argument)
 
     /* USER CODE BEGIN 5 */
     osDelay(1);
-    
-    if (KEY0_PRES == key_scan(0))
-    {
-        printf("key 0 pressed, enter pairing status ...\r\n");
-        radio_pairing_status_set(true);
-    }
 
     /* Infinite loop */
     for(;;)
     {
-        osDelay(1000);
-        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
+//        osDelay(1000);
+//        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
 
         /*
         printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d\r\n", 
@@ -413,6 +488,13 @@ void StartDefaultTask(void const * argument)
         printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
         */
         printf("hb:%d\r\n", heartbeat_cnt);
+
+		if (KEY0_PRES == key_scan(0))
+		{
+			printf("key 0 pressed, enter pairing status ...\r\n");
+			radio_pairing_status_set(true);
+		}
+
     }
 
     /* USER CODE END 5 */ 
@@ -442,13 +524,50 @@ void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
     PPM_ENCODER ppm;
     uint16_t dummy;
     
-    if (htim->Instance == TIM8)
+    if (htim->Instance == TIM1)
     {
-        //printf("T8 UP\r\n");
+        //printf("T1 UP\r\n");
         #if 1
         __HAL_TIM_CLEAR_IT(htim, TIM_SR_UIF);
         htim->Instance->ARR = *p_ppm_pulse_seqence;
         p_ppm_pulse_seqence++;
+		currentPpmChannel++;
+		switch(currentPpmChannel)
+		{
+		case 1:
+			HAL_GPIO_WritePin(PPM_CH1_PORT, PPM_CH1_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH2_PORT, PPM_CH2_PIN, GPIO_PIN_SET);
+			break;
+		case 2:
+			HAL_GPIO_WritePin(PPM_CH2_PORT, PPM_CH2_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH3_PORT, PPM_CH3_PIN, GPIO_PIN_SET);
+			break;
+		case 3:
+			HAL_GPIO_WritePin(PPM_CH3_PORT, PPM_CH3_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH4_PORT, PPM_CH4_PIN, GPIO_PIN_SET);
+			break;
+		case 4:
+			HAL_GPIO_WritePin(PPM_CH4_PORT, PPM_CH4_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH5_PORT, PPM_CH5_PIN, GPIO_PIN_SET);
+			break;
+		case 5:
+			HAL_GPIO_WritePin(PPM_CH5_PORT, PPM_CH5_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH6_PORT, PPM_CH6_PIN, GPIO_PIN_SET);
+			break;
+		case 6:
+			HAL_GPIO_WritePin(PPM_CH6_PORT, PPM_CH6_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH7_PORT, PPM_CH7_PIN, GPIO_PIN_SET);
+			break;
+		case 7:
+			HAL_GPIO_WritePin(PPM_CH7_PORT, PPM_CH7_PIN, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PPM_CH8_PORT, PPM_CH8_PIN, GPIO_PIN_SET);
+			break;
+		case 8:
+			HAL_GPIO_WritePin(PPM_CH8_PORT, PPM_CH8_PIN, GPIO_PIN_RESET);
+			break;
+		default:
+			break;
+		}
         if ((*p_ppm_pulse_seqence) == 0)
         {
             radio_get_pload((uint8_t*)ppm.channels);
@@ -464,6 +583,8 @@ void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
             __HAL_TIM_ENABLE_IT(htim, TIM_IT_CC2);
             //__HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
             p_ppm_pulse_seqence = &ppm_pulse_seqence[0];
+			currentPpmChannel = 0;
+			HAL_GPIO_WritePin(PPM_CH1_PORT, PPM_CH1_PIN, GPIO_PIN_SET);
         }
         #endif
     }

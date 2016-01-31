@@ -26,7 +26,7 @@
 #define CSN_LOW() \
     do            \
     {                \
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET); \
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); \
     } while(0)
 
 /** Macro that set radio's CSN line HIGH.
@@ -35,16 +35,17 @@
 #define CSN_HIGH() \
     do             \
     {              \
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);  \
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);  \
     } while(0)
 
+#if defined (RADIO_CONF_PRX)
 /** Macro that set radio's CE line LOW.
  *
  */
 #define CE_LOW() \
     do           \
     {            \
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); \
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); \
     } while(0)
 
 /** Macro that set radio's CE line HIGH.
@@ -53,10 +54,33 @@
 #define CE_HIGH() \
     do            \
     {             \
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); \
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); \
     } while(0)
 
-#define IRQ()  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1)
+#define IRQ()  HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4)
+
+#else
+/** Macro that set radio's CE line LOW.
+ *
+ */
+#define CE_LOW() \
+    do           \
+    {            \
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET); \
+    } while(0)
+
+/** Macro that set radio's CE line HIGH.
+ *
+ */
+#define CE_HIGH() \
+    do            \
+    {             \
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET); \
+    } while(0)
+
+#define IRQ()  HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0)
+
+#endif
 
 /** Macro for writing the radio SPI data register.
  *
