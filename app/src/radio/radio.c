@@ -199,9 +199,7 @@ void radio_pairing_status_set(bool status)
 
 void radio_host_task(void const * argument)
 {
-    uint8_t *ptr;
-    uint8_t len;
-    argument = argument;
+   argument = argument;
 
     gzll_init();
     gzp_init();
@@ -246,19 +244,23 @@ void radio_host_task(void const * argument)
         
         if (gzll_get_rx_data_ready_pipe_number() == 2)
         {
+            // pload used to generate PPM
+            // 2 Bytes per unit, and changes slowly, so no need to be protect
             if (gzll_rx_fifo_read(pload, NULL, NULL))
             {
                 printf("pload:%d\r\n", *(uint16_t*)pload);
                 memset(ack_pload, 0, RF_PAYLOAD_LENGTH);
-               
-                ptr = ack_pload;
-                len = telemetry_push_volt_cur(ack_pload);
-                ptr += len;
-                
-                len = telemetry_push_attitude(ptr);
-  
-                //printf("roll %f, pitch %f, yaw %f\r\n", ToDeg(*(float*)&ack_pload[6]), 
-                    //ToDeg(*(float*)&ack_pload[10]), ToDeg(*(float*)&ack_pload[14]));
+
+			    telemetry_data_encode(ack_pload);
+
+                float roll, pitch, alt;
+
+				memcpy(&roll, &ack_pload[11], sizeof(float));
+				memcpy(&pitch, &ack_pload[15], sizeof(float));
+                memcpy(&alt, &ack_pload[21], sizeof(float));
+
+				printf("roll %f, pitch %f, alt %f\r\n", ToDeg(roll), ToDeg(pitch), ToDeg(alt));
+				
                 gzll_ack_payload_write(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH, 2);
             }
         }
