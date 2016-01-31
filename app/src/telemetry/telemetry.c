@@ -246,11 +246,11 @@ void telemetry_data_request_read(void)
 }
 
 void telemetry_data_encode_lock(void){
-    __HAL_UART_DISABLE(&huart3);
+    __HAL_UART_DISABLE_IT(&huart3, UART_IT_RXNE);
 }
 
 void telemetry_data_encode_unlock(void){
-    __HAL_UART_ENABLE(&huart3);
+    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
 }
 
 uint8_t telemetry_data_encode(void* out_buf){
