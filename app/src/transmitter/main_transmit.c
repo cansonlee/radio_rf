@@ -460,34 +460,7 @@ void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim)
 
 void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
 {
-    PPM_ENCODER ppm;
-    uint16_t dummy;
-    
-    if (htim->Instance == TIM1)
-    {
-        //printf("T1 UP\r\n");
-        #if 1
-        __HAL_TIM_CLEAR_IT(htim, TIM_SR_UIF);
-        htim->Instance->ARR = *p_ppm_pulse_seqence;
-        p_ppm_pulse_seqence++;
-        if ((*p_ppm_pulse_seqence) == 0)
-        {
-            radio_get_pload((uint8_t*)ppm.channels);
-            ppm.stop_pulse_width = PPM_STOP_PULSE_WIDTH;
-            ppm.valid_chan_num = 8;
-            ppm_encoder(&ppm, ppm_pulse_seqence, &dummy);
-
-            htim->Instance->CCR2 = dummy;
-            
-            //printf("T8En\r\n");
-            __HAL_TIM_CLEAR_IT(htim, TIM_SR_CC2IF);
-            /* Enable the TIM Capture/Compare 2 interrupt */
-            __HAL_TIM_ENABLE_IT(htim, TIM_IT_CC2);
-            //__HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
-            p_ppm_pulse_seqence = &ppm_pulse_seqence[0];
-        }
-        #endif
-    }
+   
 }
 
 void _init (void)
