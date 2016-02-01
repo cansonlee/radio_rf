@@ -91,8 +91,6 @@ void telemetry_pull_alt(void* buf, TELEMETRY_VFR_HUD* hud);
 void telemetry_pull_attitude(void* buf, TELEMETRY_ATTITUDE* attitude);
 void telemetry_pull_heading(void* buf, TELEMETRY_VFR_HUD* hud);
 
-extern uint8_t telemetry_data_encode(void* out_buf);
-
 int32_t telemetry_init(void)
 {
     telemetry_uart3_init();

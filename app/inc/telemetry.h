@@ -103,13 +103,6 @@ typedef struct _telemetry_stream_s
 
 int32_t telemetry_init(void);
 
-uint8_t telemetry_push_attitude
-(
-    void *buf
-);
+uint8_t telemetry_data_encode(void* out_buf);
 
-uint8_t telemetry_push_volt_cur
-(
-    void *buf
-);
 #endif
