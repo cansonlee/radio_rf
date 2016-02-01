@@ -18,11 +18,11 @@ extern uint32_t timer_1ms;
 extern uint32_t last_heart_beat_time;
 extern uint8_t gzp_system_address[];
 
-/** The payload sent over the radio. Also contains the recieved data. 
+/** The payload sent over the radio. Also contains the recieved data.
  * Should be read with radio_get_pload_byte(). */
 static uint8_t pload[RF_PAYLOAD_LENGTH];
 static uint8_t ack_pload[RF_PAYLOAD_LENGTH];
-/** The current status of the radio. Should be set with radio_set_status(), 
+/** The current status of the radio. Should be set with radio_set_status(),
  * and read with radio_get_status().
  */
 
@@ -54,16 +54,16 @@ int32_t radio_device_init(void)
     ret = pairing_list_init();
     if (ret != 0)
     {
-        printf("[%s, L%d] call pairing_list_init failed ret %d.\r\n", 
+        printf("[%s, L%d] call pairing_list_init failed ret %d.\r\n",
             __FILE__, __LINE__, ret);
         return -1;
     }
-    
+
     osSemaphoreDef(RADIO_SEM);
     radio_sema = osSemaphoreEmptyCreate(osSemaphore(RADIO_SEM));
     if (NULL == radio_sema)
     {
-        printf("[%s, L%d] create semaphore failed ret 0x%x.\r\n", 
+        printf("[%s, L%d] create semaphore failed ret 0x%x.\r\n",
             __FILE__, __LINE__, (unsigned int)radio_sema);
         return -1;
     }
@@ -72,11 +72,11 @@ int32_t radio_device_init(void)
     radioTaskHandle = osThreadCreate(osThread(radioTask), NULL);
     if (NULL == radioTaskHandle)
     {
-        printf("[%s, L%d] create thread failed.\r\n", 
+        printf("[%s, L%d] create thread failed.\r\n",
             __FILE__, __LINE__);
-        return -1;        
+        return -1;
     }
-    
+
     return 0;
 }
 
@@ -88,34 +88,15 @@ void radio_device_task(void const *argument)
     uint8_t rx_num_last = 0xff;
     uint8_t radio_data_rx_addr[GZP_SYSTEM_ADDRESS_WIDTH];
     argument = argument;
- 
+
     gzll_init();
     gzp_init();
-    
+
     for(;;)
     {
         /* waitting for data update notify */
         (void)osSemaphoreWait(radio_sema, osWaitForever);
 
-        #if 0
-        if (gzll_get_state() == GZLL_IDLE)
-        {
-            memcpy(pload, ppm_buffer, RF_PAYLOAD_LENGTH);
-            tx_success = gzll_tx_data(pload, GZLL_MAX_FW_PAYLOAD_LENGTH, 0);
-            if (!tx_success)
-            {
-                printf("call gzll_tx_data failed!\r\n");
-            }
-
-            if (gzll_rx_fifo_read(ack_pload, NULL, NULL))
-            {
-                printf("Get ack pload 0x%x%x%x%x%x\r\n", ack_pload[0], ack_pload[1],
-                    ack_pload[2], ack_pload[3], ack_pload[4]);                
-            }
-        }
-        #endif
-
-        
         rx_num = pcm_rxnum_get();
         if (rx_num != rx_num_last)
         {
@@ -123,16 +104,15 @@ void radio_device_task(void const *argument)
             gzp_update_system_address(radio_data_rx_addr);
             rx_num_last = rx_num;
         }
-        
-        #if 1
+
         if (pcm_mode_get() == PCM_MODE_BINDING)
         {
             osDelay(100);
             pairing_ret = gzp_address_req_send(rx_num);
             if (pairing_ret)
             {
-                printf("pairing success(%02x%02x%02x%02x)!\r\n", 
-                    gzp_system_address[0], gzp_system_address[1], 
+                printf("pairing success(%02x%02x%02x%02x)!\r\n",
+                    gzp_system_address[0], gzp_system_address[1],
                     gzp_system_address[2], gzp_system_address[3]);
             }
             else
@@ -147,15 +127,10 @@ void radio_device_task(void const *argument)
                 pcm_ppm_channel_get(pload, RF_PAYLOAD_LENGTH);
                 if (gzll_tx_data(pload, GZLL_MAX_FW_PAYLOAD_LENGTH, 2))
                 {
-                    
+
                     if (gzll_rx_fifo_read(ack_pload, NULL, NULL))
                     {
-                        printf("[sys status] volt:%fv current:%dma remaining:%d\r\n", 
-                            (*(uint16_t*)&ack_pload[0] / 1000.0f), (*(int16_t*)&ack_pload[2]),
-                            (*(uint16_t*)&ack_pload[4])); 
-                        printf("[attitude] roll:%f pitch: %f yaw:%f\r\n",
-                            ToDeg(*(float*)&ack_pload[6]), ToDeg(*(float*)&ack_pload[10]), 
-                            ToDeg(*(float*)&ack_pload[14]));
+                        print_test(ack_pload);
                     }
                 }
                 else
@@ -164,7 +139,6 @@ void radio_device_task(void const *argument)
                 }
             }
         }
-        #endif
     }
 }
 #endif
@@ -176,9 +150,9 @@ int32_t radio_host_init(void)
     radioTaskHandle = osThreadCreate(osThread(radioTask), NULL);
     if (NULL == radioTaskHandle)
     {
-        printf("[%s, L%d] create thread failed.\r\n", 
+        printf("[%s, L%d] create thread failed.\r\n",
             __FILE__, __LINE__);
-        return -1;        
+        return -1;
     }
 
     return 0;
@@ -241,7 +215,7 @@ void radio_host_task(void const * argument)
                 radio_pairing_status_set(false);
             }
         }
-        
+
         if (gzll_get_rx_data_ready_pipe_number() == 2)
         {
             // pload used to generate PPM
@@ -253,14 +227,9 @@ void radio_host_task(void const * argument)
 
 			    telemetry_data_encode(ack_pload);
 
-                float roll, pitch, alt;
+                // test
+                print_test(ack_pload);
 
-				memcpy(&roll, &ack_pload[11], sizeof(float));
-				memcpy(&pitch, &ack_pload[15], sizeof(float));
-                memcpy(&alt, &ack_pload[21], sizeof(float));
-
-				printf("roll %f, pitch %f, alt %f\r\n", ToDeg(roll), ToDeg(pitch), ToDeg(alt));
-				
                 gzll_ack_payload_write(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH, 2);
             }
         }
@@ -268,4 +237,18 @@ void radio_host_task(void const * argument)
 }
 #endif
 
+void print_test(void* buf){
+    TELEMETRY_DATA data;
+    telemetry_data_decode(buf, &data);
 
+    printf("system status armed %d flight mode %d:%d",
+        (data.heartbeat.base_mode & 0x80) == 0x80,
+        data.heartbeat.type, data.heartbeat.base_mode);
+    printf("roll %f°, pitch %f°, alt %fm, heading %d°\r\n",
+        ToDeg(data.attitude.roll), ToDeg(data.attitude.pitch),
+        data.vfr_hud.alt);
+    printf("battery volt %d current %d remaining %d",
+        data.sys_status.voltage_battery,
+        data.sys_status.current_battery,
+        data.sys_status.battery_remaining);
+}
