@@ -140,7 +140,7 @@ int main(void)
     host_addr_init();
 
     key_init();
-    (void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc);
+    (void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
     printf("telemetry_init ok .\r\n");
     
     (void)radio_host_init();
