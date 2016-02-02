@@ -45,6 +45,8 @@
 #include "pcm_decoder.h"
 #include "key.h"
 #include "Main_transmit.h"
+#include "telemetry_common.h"
+#include "telemetry_transmitter.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -60,8 +62,6 @@ TIM_HandleTypeDef htim3;
 //TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart3;
-
 
 osThreadId defaultTaskHandle;
 
@@ -117,7 +117,6 @@ int main(void)
     pcm_decoder_init();
     MX_TIM3_Init();
     MX_USART1_UART_Init();
-    MX_USART3_UART_Init();
 
     /* USER CODE BEGIN 2 */
 
@@ -217,23 +216,6 @@ void MX_USART1_UART_Init(void)
   HAL_UART_Init(&huart1);
 
 }
-
-/* USART3 init function */
-void MX_USART3_UART_Init(void)
-{
-
-  huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
-  huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
-  huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init(&huart3);
-
-}
-
 
 /** Pinout Configuration
 */

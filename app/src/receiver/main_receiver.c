@@ -42,6 +42,7 @@
 #include "ppm_encoder.h"
 #include "radio.h"
 #include "telemetry.h"
+#include "telemetry_common.h"
 #include "key.h"
 #include "host_addr.h"
 #include "led.h"

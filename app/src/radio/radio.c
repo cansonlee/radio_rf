@@ -142,6 +142,7 @@ void radio_device_task(void const *argument)
                     if (gzll_rx_fifo_read(ack_pload, NULL, NULL))
                     {
                         print_test(ack_pload);
+                        telemetry_radio_ack_send(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH);
                     }
                 }
                 else

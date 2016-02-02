@@ -1,7 +1,7 @@
 
 #include <stdint.h>
 
-#include "telemetry.h"
+#include "telemetry_common.h"
 
 #include "cmsis_os.h"
 
