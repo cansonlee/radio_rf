@@ -6,8 +6,13 @@
 #include "cmsis_os.h"
 
 #include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_usart.h"
+
+
 
 UART_HandleTypeDef huart3;
+
+static uint8_t m_usart3_buf; 
 
 static USARTIRQFUNC m_pfUSART3IRQHandle = NULL;
 
@@ -31,6 +36,8 @@ int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRa
     HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
 
+    HAL_USART_Receive_IT(&huart3, &m_usart3_buf, 1);
+
     return 0;
 }
 
@@ -51,16 +58,12 @@ void telemetry_uart3_init(uint32_t baudRate)
     return;
 }
 
-void USART3_IRQHandler(void)
+void HAL_USART_RxCpltCallback(USART_HandleTypeDef *husart)
 {
-    uint8_t c;
-    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) != RESET)
-    {
-        c = huart3.Instance->DR;
-        //printf("0x%x \r\n", c);
+    if (husart->Instance == USART3){
         if (m_pfUSART3IRQHandle != NULL){
-            m_pfUSART3IRQHandle(c);
-        }       
+            m_pfUSART3IRQHandle(husart->pRxBuffPtr[0]);
+        }  
     }
 }
 

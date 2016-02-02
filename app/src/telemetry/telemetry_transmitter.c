@@ -178,7 +178,7 @@ void telemetry_radio_ack_send(void* buf, uint8_t len){
         return;
     }
     
-    HAL_UART_Transmit(&huart3, (uint8_t*)&msg.magic1, COMM_MSG_LEN_EXCEPT_PAYLOAD + msg.len, 5000);
+    HAL_USART_Transmit(&huart3, (uint8_t*)&msg.magic1, COMM_MSG_LEN_EXCEPT_PAYLOAD + msg.len, 5000);
 }
 
 int8_t telemetry_comm_msg_pack(void*buf, uint8_t len, comm_message_t* msg){
