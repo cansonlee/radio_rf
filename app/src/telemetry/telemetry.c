@@ -82,12 +82,6 @@ uint8_t telemetry_push_heading(void*);
 void telemetry_data_encode_lock(void);
 void telemetry_data_encode_unlock(void);
 
-void telemetry_pull_mode(void* buf, TELEMETRY_HEARTBEAT* heartbeat);
-void telemetry_pull_volt_cur(void* buf, TELEMETRY_SYS_STATUS* battery);
-void telemetry_pull_alt(void* buf, TELEMETRY_VFR_HUD* hud);
-void telemetry_pull_attitude(void* buf, TELEMETRY_ATTITUDE* attitude);
-void telemetry_pull_heading(void* buf, TELEMETRY_VFR_HUD* hud);
-
 int32_t telemetry_receiver_init(void)
 {
     osSemaphoreDef(TELEMETRY_SEM);
@@ -232,14 +226,37 @@ uint8_t telemetry_data_encode(void* out_buf){
     return len;
 }
 
-void telemetry_data_decode(void* buf, TELEMETRY_DATA* data){
-    uint8_t* ptr = buf;
+#define _TELEMETRY_MAV_DATA_GET(pBuf, offset)             (*((uint8_t*)(pBuf) + (offset)))
+#define _TELEMETRY_MAV_ARMED_GET(pBuf)                    (_TELEMETRY_MAV_DATA_GET(pBuf, 0) & ((uint8_t)1<<6))
+#define _TELEMETRY_MAV_TYPE_GET(pBuf)                     (_TELEMETRY_MAV_DATA_GET(pBuf, 0) & 0x7F)
+#define _TELEMETRY_MAV_CUSTOM_MODE_GET(pBuf)              (uint32_t)_TELEMETRY_MAV_DATA_GET(pBuf, 1)
+#define _TELEMETRY_MAV_THROTTLE_GET(pBuf)                 (uint16_t)_TELEMETRY_MAV_DATA_GET(pBuf, 2)
+#define _TELEMETRY_MAV_RSSI_GET(pBuf)                     _TELEMETRY_MAV_DATA_GET(pBuf, 3)
+#define _TELEMETRY_MAV_GPS_FIX_TYPE_GET(pBuf)             _TELEMETRY_MAV_DATA_GET(pBuf, 4)
+#define _TELEMETRY_MAV_GPS_NUM_GET(pBuf)                  _TELEMETRY_MAV_DATA_GET(pBuf, 5)
+#define _TELEMETRY_MAV_BATTERY_VOLT_CPY(pBuf, pVolt)       memcpy((pVolt), ((uint8_t*)(pBuf) + 6), sizeof(uint16_t))
+#define _TELEMETRY_MAV_BATTERY_CURRENT_CPY(pBuf, pCurrent) memcpy((pCurrent), ((uint8_t*)(pBuf) + 8), sizeof(int16_t))
+#define _TELEMETRY_MAV_BATTERY_REMAIN_GET(pBuf)            _TELEMETRY_MAV_DATA_GET(pBuf, 10)
+#define _TELEMETRY_MAV_ATTITUDE_ROLL_CPY(pBuf, pRoll)      memcpy((pRoll), ((uint8_t*)(pBuf) + 11), sizeof(float))
+#define _TELEMETRY_MAV_ATTITUDE_PITCH_CPY(pBuf, pPitch)    memcpy((pPitch), ((uint8_t*)(pBuf) + 15), sizeof(float))
+#define _TELEMETRY_MAV_HUD_HEADING_CPY(pBuf, pHeading)     memcpy((pHeading), ((uint8_t*)(pBuf) + 19), sizeof(int16_t))
+#define _TELEMETRY_MAV_HUD_ALT_CPY(pBuf, pAlt)             memcpy((pAlt), ((uint8_t*)(pBuf) + 21), sizeof(float))
 
-    telemetry_pull_mode(buf, &data->heartbeat);
-    telemetry_pull_volt_cur(&ptr[6], &data->sys_status);
-    telemetry_pull_attitude(&ptr[11], &data->attitude);
-    telemetry_pull_heading(&ptr[19], &data->vfr_hud);
-    telemetry_pull_alt(&ptr[21], &data->vfr_hud);
+
+void telemetry_data_decode(void* buf, TELEMETRY_DATA* data){
+
+    data->heartbeat.base_mode = _TELEMETRY_MAV_ARMED_GET(buf);
+    data->heartbeat.type = _TELEMETRY_MAV_TYPE_GET(buf);
+    data->heartbeat.custom_mode = _TELEMETRY_MAV_CUSTOM_MODE_GET(buf);
+
+   _TELEMETRY_MAV_BATTERY_VOLT_CPY(buf, &data->sys_status.voltage_battery);
+    _TELEMETRY_MAV_BATTERY_CURRENT_CPY(buf, &data->sys_status.current_battery);
+    data->sys_status.battery_remaining = _TELEMETRY_MAV_BATTERY_REMAIN_GET(buf);
+
+    _TELEMETRY_MAV_ATTITUDE_ROLL_CPY(buf, &data->attitude.roll);
+    _TELEMETRY_MAV_ATTITUDE_PITCH_CPY(buf, &data->attitude.pitch);
+
+    _TELEMETRY_MAV_HUD_HEADING_CPY(buf, &data->vfr_hud.heading);
 }
 
 uint8_t telemetry_push_data(void** out_buf, uint8_t (*pFunc)(void*)){
@@ -280,15 +297,6 @@ uint8_t telemetry_push_mode(void* buf){
     return len;
 }
 
-void telemetry_pull_mode(void* buf, TELEMETRY_HEARTBEAT* heartbeat){
-    uint8_t* ptr = buf;
-    uint8_t armed_mask = ((uint8_t)1<<6);
-
-    heartbeat->base_mode = ptr[0] & armed_mask;
-    heartbeat->type = ptr[0] & 0x7F;
-    heartbeat->custom_mode = ptr[1];
-}
-
 // 1 Byte
 uint8_t telemetry_push_throttle(void* buf){
     *(uint8_t*)buf = (uint8_t)telemetry.vfr_hud.throttle;
@@ -302,7 +310,6 @@ uint8_t telemetry_push_rssi(void* buf){
 
     return sizeof(uint8_t);
 }
-
 
 // 5 Bytes
 uint8_t telemetry_push_volt_cur
@@ -326,15 +333,6 @@ uint8_t telemetry_push_volt_cur
 
     return len;
 }
-
-void telemetry_pull_volt_cur(void* buf, TELEMETRY_SYS_STATUS* battery){
-    uint8_t* ptr = buf;
-
-    memcpy(&battery->voltage_battery, &ptr[0], sizeof(uint16_t));
-    memcpy(&battery->current_battery, &ptr[2], sizeof(uint16_t));
-    battery->battery_remaining = ptr[5];
-}
-
 
 // gps fix type and satellites num.
 // 2 Bytes
@@ -372,13 +370,6 @@ uint8_t telemetry_push_attitude
     return len;
 }
 
-void telemetry_pull_attitude(void* buf, TELEMETRY_ATTITUDE* attitude){
-    uint8_t* ptr = buf;
-
-    memcpy(&attitude->roll, &ptr[0], sizeof(float));
-    memcpy(&attitude->pitch, &ptr[4], sizeof(float));
-}
-
 // 2 Bytes
 uint8_t telemetry_push_heading(void* buf){
 
@@ -387,20 +378,12 @@ uint8_t telemetry_push_heading(void* buf){
     return sizeof(int16_t);
 }
 
-void telemetry_pull_heading(void* buf, TELEMETRY_VFR_HUD* hud){
-    memcpy(&hud->heading, buf, sizeof(uint16_t));
-}
-
 // 4 Bytes
 uint8_t telemetry_push_alt(void* buf){
 
     memcpy(buf, &telemetry.vfr_hud.alt, sizeof(float));
 
     return sizeof(float);
-}
-
-void telemetry_pull_alt(void* buf, TELEMETRY_VFR_HUD* hud){
-    memcpy(&hud->alt, buf, sizeof(float));
 }
 
 // distance from home
