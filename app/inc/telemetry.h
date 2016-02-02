@@ -101,8 +101,19 @@ typedef struct _telemetry_stream_s
     uint16_t freq;
 } TELEMETRY_STREAM;
 
-int32_t telemetry_init(void);
+typedef void (*USARTIRQFUNC)(uint8_t);
+typedef int32_t (*USARTINITFUNC)(void);
 
+int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ);
+int32_t telemetry_receiver_init(void);
+
+void telemetry_mavlink_proc(uint8_t c);
 uint8_t telemetry_data_encode(void* out_buf);
+
+void telemetry_comm_proc(uint8_t c);
+uint8_t telemetry_rxnum_get(void);
+uint8_t telemetry_transmitter_mode_get(void);
+void telemetry_transmitter_channel_get(uint8_t *addr, uint8_t len);
+
 
 #endif

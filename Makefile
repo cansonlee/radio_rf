@@ -90,17 +90,18 @@ SRCDIRS   = ./freertos/src \
             ./app/src/radio \
             ./app/src/system \
             ./app/src/pairing_list \
+            ./app/src/telemetry \
             ./target/miniv3 \
             ./drivers/nrf24l01/src \
             ./gazell/src \
             ./drivers/flash/src \
             ./drivers/i2c \
             ./drivers/eeprom \
-            ./drivers/led 
+            ./drivers/led
 
 
 ifeq ($(RADIO_TYPE), PRX)
-	SRCDIRS += ./app/src/receiver ./gazell/host ./app/src/telemetry ./app/src/host_addr
+	SRCDIRS += ./app/src/receiver ./gazell/host ./app/src/host_addr
 else
 	SRCDIRS += ./app/src/transmitter ./gazell/device ./drivers/lcd/src
 endif

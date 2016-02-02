@@ -137,6 +137,10 @@ int main(void)
     
 //    key_init();		//no need for transmiter--leon
     __enable_irq();
+
+    telemetry_init(NULL, telemetry_comm_proc);
+    printf("telemetry_init ok .\r\n");
+    
     (void)radio_device_init();
 
     printf("system init ok, create tasks ...\r\n");

@@ -12,6 +12,10 @@
 #include "pairing_list.h"
 #include "led.h"
 
+#ifndef GZLL_HOST_ONLY
+#include "main_transmit.h"
+#endif
+
 extern bool waitting_for_heartbeat;
 extern bool mavlink_active;
 extern uint32_t timer_1ms;
@@ -30,6 +34,10 @@ static uint8_t ack_pload[RF_PAYLOAD_LENGTH];
 
 osSemaphoreId radio_sema;
 osThreadId radioTaskHandle;
+
+bool radio_pairing_status_get(void);
+void print_test(void* buf);
+
 
 uint8_t radio_get_pload_byte (uint8_t byte_index)
 {
@@ -97,7 +105,8 @@ void radio_device_task(void const *argument)
         /* waitting for data update notify */
         (void)osSemaphoreWait(radio_sema, osWaitForever);
 
-        rx_num = pcm_rxnum_get();
+        //rx_num = pcm_rxnum_get();
+        rx_num = telemetry_rxnum_get();
         if (rx_num != rx_num_last)
         {
             (void)pairing_list_addr_read(rx_num, radio_data_rx_addr);
@@ -105,7 +114,8 @@ void radio_device_task(void const *argument)
             rx_num_last = rx_num;
         }
 
-        if (pcm_mode_get() == PCM_MODE_BINDING)
+        //if (pcm_mode_get() == PCM_MODE_BINDING)
+        if (telemetry_transmitter_mode_get() == TRANSMITTING_MODE_BINDING)
         {
             osDelay(100);
             pairing_ret = gzp_address_req_send(rx_num);
@@ -124,7 +134,8 @@ void radio_device_task(void const *argument)
         {
             if (gzll_get_state() == GZLL_IDLE)
             {
-                pcm_ppm_channel_get(pload, RF_PAYLOAD_LENGTH);
+                //pcm_ppm_channel_get(pload, RF_PAYLOAD_LENGTH);
+                telemetry_transmitter_channel_get(pload, RF_PAYLOAD_LENGTH);
                 if (gzll_tx_data(pload, GZLL_MAX_FW_PAYLOAD_LENGTH, 2))
                 {
 
@@ -237,6 +248,7 @@ void radio_host_task(void const * argument)
 }
 #endif
 
+extern void telemetry_data_decode(void* buf, TELEMETRY_DATA* data);
 void print_test(void* buf){
     TELEMETRY_DATA data;
     telemetry_data_decode(buf, &data);

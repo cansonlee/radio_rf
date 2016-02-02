@@ -7,11 +7,11 @@
 #include "telemetry.h"
 
 extern uint32_t timer_1ms;
+extern UART_HandleTypeDef huart3;
 
 mavlink_system_t mavlink_system = {20, 3, 0, 0 ,0 ,0};
 mavlink_system_t target_system;
 
-UART_HandleTypeDef huart3;
 TELEMETRY_DATA telemetry;
 osSemaphoreId telemetry_sema;
 osThreadId telemetryTaskHandle;
@@ -65,11 +65,8 @@ TELEMETRY_STREAM streams[] =
 
 uint32_t streams_max = sizeof(streams) / sizeof(streams[0]);
 
-void telemetry_uart3_init(void);
 void telemetry_process_task(void const *argument);
-void telemetry_mavlink_proc(uint8_t c);
 void telemetry_data_request_read(void);
-void USART3_IRQHandler(void);
 
 uint8_t telemetry_push_data(void** out_buf, uint8_t (*pFunc)(void*));
 uint8_t telemetry_push_mode(void*);
@@ -91,10 +88,8 @@ void telemetry_pull_alt(void* buf, TELEMETRY_VFR_HUD* hud);
 void telemetry_pull_attitude(void* buf, TELEMETRY_ATTITUDE* attitude);
 void telemetry_pull_heading(void* buf, TELEMETRY_VFR_HUD* hud);
 
-int32_t telemetry_init(void)
+int32_t telemetry_receiver_init(void)
 {
-    telemetry_uart3_init();
-
     osSemaphoreDef(TELEMETRY_SEM);
     telemetry_sema = osSemaphoreEmptyCreate(osSemaphore(TELEMETRY_SEM));
     if (NULL == telemetry_sema)
@@ -104,36 +99,7 @@ int32_t telemetry_init(void)
         return -1;
     }
 
-    osThreadDef(telemetryTask, telemetry_process_task, osPriorityNormal, 0, 1024);
-    telemetryTaskHandle = osThreadCreate(osThread(telemetryTask), NULL);
-    if (NULL == telemetryTaskHandle)
-    {
-        printf("[%s, L%d] create thread failed.\r\n",
-            __FILE__, __LINE__);
-        return -1;
-    }
-
-    HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
-    HAL_NVIC_EnableIRQ(USART3_IRQn);
-
     return 0;
-}
-
-/* USART3 init function */
-void telemetry_uart3_init(void)
-{
-
-    huart3.Instance = USART3;
-    huart3.Init.BaudRate = 57600;
-    huart3.Init.WordLength = UART_WORDLENGTH_8B;
-    huart3.Init.StopBits = UART_STOPBITS_1;
-    huart3.Init.Parity = UART_PARITY_NONE;
-    huart3.Init.Mode = UART_MODE_TX_RX;
-    huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_UART_Init(&huart3);
-
-    return;
 }
 
 void telemetry_mavlink_proc(uint8_t c)
@@ -216,17 +182,6 @@ void telemetry_mavlink_proc(uint8_t c)
     packet_drops += status.packet_rx_drop_count;
 
     return;
-}
-
-void USART3_IRQHandler(void)
-{
-    uint8_t c;
-    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) != RESET)
-    {
-        c = huart3.Instance->DR;
-        //printf("0x%x \r\n", c);
-        telemetry_mavlink_proc(c);
-    }
 }
 
 void telemetry_data_request_read(void)
