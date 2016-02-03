@@ -76,7 +76,7 @@ void SysTick_Handler(void)
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
-extern UART_HandleTypeDef huart3;
+extern USART_HandleTypeDef hsuart3;
 //extern TIM_HandleTypeDef htim8;
 /* USER CODE BEGIN 1 */
 
@@ -107,7 +107,7 @@ void EXTI4_IRQHandler(void)
 
 void USART3_IRQHandler(void)
 {
-    HAL_USART_IRQHandler(&huart3);
+    HAL_USART_IRQHandler(&hsuart3);
 }
 
 

@@ -13,7 +13,7 @@
 #include "led.h"
 
 #ifndef GZLL_HOST_ONLY
-#include "main_transmit.h"
+#include "common.h"
 #endif
 
 extern bool waitting_for_heartbeat;
@@ -113,7 +113,7 @@ void radio_device_task(void const *argument)
             gzp_update_system_address(radio_data_rx_addr);
             rx_num_last = rx_num;
         }
-
+        
         //if (pcm_mode_get() == PCM_MODE_BINDING)
         if (telemetry_transmitter_mode_get() == TRANSMITTING_MODE_BINDING)
         {

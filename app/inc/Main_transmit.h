@@ -11,9 +11,5 @@
 #define	SPORT_RX_PIN		GPIO_PIN_11
 #define	SPORT_TR_PORT		GPIOB
 
-// transmitting module working mode 
-#define  TRANSMITTING_MODE_BINDING          (1)
-#define  TRANSMITTING_MODE_NORMAL           (0)
-
 #endif
 

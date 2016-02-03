@@ -456,7 +456,7 @@ void _init (void)
 
 void uart1_send(uint8_t *buf, uint32_t len)
 {
-     HAL_USART_Transmit(&huart1, buf, len, 5000);
+     HAL_UART_Transmit(&huart1, buf, len, 5000);
 }
 #ifdef USE_FULL_ASSERT
 

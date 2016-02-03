@@ -6,17 +6,16 @@
 #include "cmsis_os.h"
 
 #include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_usart.h"
 
 
 
-UART_HandleTypeDef huart3;
+USART_HandleTypeDef hsuart3;
 
 static uint8_t m_usart3_buf; 
 
 static USARTIRQFUNC m_pfUSART3IRQHandle = NULL;
 
-void telemetry_uart3_init(uint32_t baudRate);
+void telemetry_usart3_init(uint32_t baudRate);
 
 int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRate)
 {
@@ -36,7 +35,7 @@ int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRa
     HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
 
-    HAL_USART_Receive_IT(&huart3, &m_usart3_buf, 1);
+    HAL_USART_Receive_IT(&hsuart3, &m_usart3_buf, 1);
 
     return 0;
 }
@@ -45,15 +44,15 @@ int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRa
 void telemetry_uart3_init(uint32_t baudRate)
 {
 
-    huart3.Instance = USART3;
-    huart3.Init.BaudRate = baudRate;
-    huart3.Init.WordLength = UART_WORDLENGTH_8B;
-    huart3.Init.StopBits = UART_STOPBITS_1;
-    huart3.Init.Parity = UART_PARITY_NONE;
-    huart3.Init.Mode = UART_MODE_TX_RX;
-    huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_UART_Init(&huart3);
+    hsuart3.Instance = USART3;
+    hsuart3.Init.BaudRate = baudRate;
+    hsuart3.Init.WordLength = UART_WORDLENGTH_8B;
+    hsuart3.Init.StopBits = UART_STOPBITS_1;
+    hsuart3.Init.Parity = UART_PARITY_NONE;
+    hsuart3.Init.Mode = UART_MODE_TX_RX;
+    //hsuart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    //hsuart3.Init.OverSampling = UART_OVERSAMPLING_16;
+    HAL_USART_Init(&hsuart3);
 
     return;
 }

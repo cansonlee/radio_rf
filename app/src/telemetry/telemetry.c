@@ -7,7 +7,7 @@
 #include "telemetry.h"
 
 extern uint32_t timer_1ms;
-extern UART_HandleTypeDef huart3;
+extern USART_HandleTypeDef hsuart3;
 
 mavlink_system_t mavlink_system = {20, 3, 0, 0 ,0 ,0};
 mavlink_system_t target_system;
@@ -192,18 +192,18 @@ void telemetry_data_request_read(void)
 
         len = mavlink_msg_to_send_buffer(buf, &msg);
 
-        HAL_UART_Transmit(&huart3, buf, len, 5000);
+        HAL_USART_Transmit(&hsuart3, buf, len, 5000);
     }
 
     return;
 }
 
 void telemetry_data_encode_lock(void){
-    __HAL_UART_DISABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_USART_DISABLE_IT(&hsuart3, UART_IT_RXNE);
 }
 
 void telemetry_data_encode_unlock(void){
-    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_USART_ENABLE_IT(&hsuart3, UART_IT_RXNE);
 }
 
 uint8_t telemetry_data_encode(void* out_buf){
@@ -401,7 +401,7 @@ void telemetry_process_task(void const *argument)
     uint32_t i;
     argument = argument;
 
-    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_USART_ENABLE_IT(&hsuart3, UART_IT_RXNE);
 
     for (;;)
     {
