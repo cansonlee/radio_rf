@@ -73,13 +73,13 @@ uint8_t comm_protocol_frame_char_buffer(comm_message_t* rxmsg, comm_status_t* st
         case COMM_PARSE_STATE_GOT_STX2:
             rxmsg->len = c;
             status->packet_idx = 0;
-            comm_checksum_start(rxmsg, c);
+            comm_protocol_checksum_start(rxmsg, c);
 
             status->parse_state = COMM_PARSE_STATE_GOT_LENGTH;
         break;
         case COMM_PARSE_STATE_GOT_LENGTH:
             rxmsg->msgid = c;
-            comm_checksum_update(rxmsg, c);
+            comm_protocol_checksum_update(rxmsg, c);
 
             if (rxmsg->len == 0){
                 status->parse_state = COMM_PARSE_STATE_GOT_PAYLOAD;
@@ -89,7 +89,7 @@ uint8_t comm_protocol_frame_char_buffer(comm_message_t* rxmsg, comm_status_t* st
         break;
         case COMM_PARSE_STATE_GOT_MSGID:
             rxmsg->payload[status->packet_idx++] = c;
-            comm_checksum_update(rxmsg, c);
+            comm_protocol_checksum_update(rxmsg, c);
             if (status->packet_idx == rxmsg->len){
                 status->parse_state = COMM_PARSE_STATE_GOT_PAYLOAD;
             }
