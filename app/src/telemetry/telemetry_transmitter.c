@@ -9,6 +9,8 @@
 
 extern USART_HandleTypeDef hsuart3;
 
+#define COMM_CHANNEL_VALUES_LENGTH 32
+
 static uint8_t comm_pair_rx_num = 0;
 static uint8_t comm_working_mode = 0;
 static uint8_t comm_channel_values[COMM_CHANNEL_VALUES_LENGTH];

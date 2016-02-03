@@ -52,8 +52,6 @@ typedef enum {
 #define COMM_MSG_SEND_CHANNELS 2
 #define COMM_MSG_RECEIVED_ACK  3
 
-#define COMM_CHANNEL_VALUES_LENGTH 32
-
 typedef struct {
     uint8_t calc_checksum;                                        // caculated xor check 
 
