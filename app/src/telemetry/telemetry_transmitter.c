@@ -8,7 +8,7 @@
 #include "comm_protocol.h"
 #include "telemetry_transmitter.h"
 
-extern USART_HandleTypeDef hsuart3;
+
 
 #define COMM_CHANNEL_VALUES_LENGTH 32
 
@@ -67,7 +67,7 @@ void telemetry_radio_ack_send(void* buf, uint8_t len){
     if (len <= 0){
         return;
     }
-    
-    HAL_USART_Transmit(&hsuart3, (uint8_t*)_COMM_MSG_ADDR(&msg), ret_len, 5000);
+
+    telemetry_transmit((uint8_t*)_COMM_MSG_ADDR(&msg), ret_len, 5000);
 }
 
