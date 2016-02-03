@@ -1,6 +1,6 @@
 
 #include <stdint.h>
-#include <stdio.h>
+#include <string.h>
 
 #include "comm_protocol.h"
 
@@ -131,14 +131,13 @@ void comm_protocol_checksum_update(comm_message_t* msg, uint8_t c){
     msg->calc_checksum ^= c;
 }
 
+
+// return the length of the message need to send
+// < 0 error
 int8_t comm_protocol_msg_pack(void*buf, uint8_t len, comm_message_t* msg){
 
     uint8_t* ptr = buf;
-    
-    if (len > COMM_PAYLOAD_LENGTH){
-        return -1;
-    }
-    
+        
     msg->magic1 = COMM_PROTOCOL_PK_STX1;
     msg->magic2 = COMM_PROTOCOL_PK_STX2;
 
@@ -157,6 +156,6 @@ int8_t comm_protocol_msg_pack(void*buf, uint8_t len, comm_message_t* msg){
     
     msg->payload[len]= msg->calc_checksum;
 
-    return 0;
+    return COMM_MSG_LEN_EXCEPT_PAYLOAD + msg->len;
 }
 

@@ -121,6 +121,6 @@ typedef struct _telemetry_stream_s
 int32_t telemetry_receiver_init(void);
 void telemetry_mavlink_proc(uint8_t c);
 uint8_t telemetry_data_encode(void* out_buf);
-
+void telemetry_data_decode(void* buf, TELEMETRY_DATA* data);
 
 #endif

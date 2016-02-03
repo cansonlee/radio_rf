@@ -6,6 +6,7 @@
 
 
 #include "comm_protocol.h"
+#include "telemetry_transmitter.h"
 
 extern USART_HandleTypeDef hsuart3;
 
@@ -15,6 +16,7 @@ static uint8_t comm_pair_rx_num = 0;
 static uint8_t comm_working_mode = 0;
 static uint8_t comm_channel_values[COMM_CHANNEL_VALUES_LENGTH];
 
+void comm_protocol_parsed_hook(comm_message_t* msg);
 
 void comm_protocol_parsed_hook(comm_message_t* msg){
     switch(msg->msgid){
@@ -56,12 +58,16 @@ void telemetry_transmitter_channel_get(uint8_t *addr, uint8_t len)
 }
 
 void telemetry_radio_ack_send(void* buf, uint8_t len){
+
+    uint8_t ret_len;
     comm_message_t msg;
+
+    ret_len = comm_protocol_msg_pack(buf, len, &msg);
     
-    if (comm_protocol_msg_pack(buf, len, &msg) != 0){
+    if (len <= 0){
         return;
     }
     
-    HAL_USART_Transmit(&hsuart3, (uint8_t*)&msg.magic1, COMM_MSG_LEN_EXCEPT_PAYLOAD + msg.len, 5000);
+    HAL_USART_Transmit(&hsuart3, (uint8_t*)_COMM_MSG_ADDR(&msg), ret_len, 5000);
 }
 

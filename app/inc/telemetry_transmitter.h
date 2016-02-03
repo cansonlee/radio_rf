@@ -1,6 +1,7 @@
 #ifndef __TELEMETRY_TRANSMITTER_H__
 #define __TELEMETRY_TRANSMITTER_H__
 
+void telemetry_comm_proc(uint8_t c);
 uint8_t telemetry_rxnum_get(void);
 uint8_t telemetry_transmitter_mode_get(void);
 void telemetry_transmitter_channel_get(uint8_t *addr, uint8_t len);
