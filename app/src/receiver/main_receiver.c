@@ -42,6 +42,7 @@
 #include "ppm_encoder.h"
 #include "radio.h"
 #include "telemetry.h"
+#include "telemetry_common.h"
 #include "key.h"
 #include "host_addr.h"
 #include "led.h"
@@ -139,7 +140,7 @@ int main(void)
     host_addr_init();
 
     key_init();
-    (void)telemetry_init();
+    (void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
     printf("telemetry_init ok .\r\n");
     
     (void)radio_host_init();
@@ -282,7 +283,7 @@ void MX_GPIO_Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(PPM_CH6_PORT, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(PPM_CH6_PIN, PPM_CH6_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(PPM_CH6_PORT, PPM_CH6_PIN, GPIO_PIN_RESET);
 
 	/* PPM CH7 */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

@@ -47,6 +47,8 @@ void TIM3_IRQHandler(void);
 void TIM4_IRQHandler(void);
 void EXTI0_IRQHandler(void);
 void EXTI4_IRQHandler(void);
+void USART3_IRQHandler(void);
+
 
 
 extern void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim);
@@ -74,6 +76,7 @@ void SysTick_Handler(void)
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
+extern USART_HandleTypeDef hsuart3;
 //extern TIM_HandleTypeDef htim8;
 /* USER CODE BEGIN 1 */
 
@@ -101,6 +104,12 @@ void EXTI4_IRQHandler(void)
 {
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
 }
+
+void USART3_IRQHandler(void)
+{
+    HAL_USART_IRQHandler(&hsuart3);
+}
+
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

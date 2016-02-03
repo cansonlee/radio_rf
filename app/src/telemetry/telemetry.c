@@ -7,11 +7,11 @@
 #include "telemetry.h"
 
 extern uint32_t timer_1ms;
+extern USART_HandleTypeDef hsuart3;
 
 mavlink_system_t mavlink_system = {20, 3, 0, 0 ,0 ,0};
 mavlink_system_t target_system;
 
-UART_HandleTypeDef huart3;
 TELEMETRY_DATA telemetry;
 osSemaphoreId telemetry_sema;
 osThreadId telemetryTaskHandle;
@@ -65,11 +65,8 @@ TELEMETRY_STREAM streams[] =
 
 uint32_t streams_max = sizeof(streams) / sizeof(streams[0]);
 
-void telemetry_uart3_init(void);
 void telemetry_process_task(void const *argument);
-void telemetry_mavlink_proc(uint8_t c);
 void telemetry_data_request_read(void);
-void USART3_IRQHandler(void);
 
 uint8_t telemetry_push_data(void** out_buf, uint8_t (*pFunc)(void*));
 uint8_t telemetry_push_mode(void*);
@@ -85,12 +82,8 @@ uint8_t telemetry_push_heading(void*);
 void telemetry_data_encode_lock(void);
 void telemetry_data_encode_unlock(void);
 
-extern uint8_t telemetry_data_encode(void* out_buf);
-
-int32_t telemetry_init(void)
+int32_t telemetry_receiver_init(void)
 {
-    telemetry_uart3_init();
-
     osSemaphoreDef(TELEMETRY_SEM);
     telemetry_sema = osSemaphoreEmptyCreate(osSemaphore(TELEMETRY_SEM));
     if (NULL == telemetry_sema)
@@ -100,36 +93,7 @@ int32_t telemetry_init(void)
         return -1;
     }
 
-    osThreadDef(telemetryTask, telemetry_process_task, osPriorityNormal, 0, 1024);
-    telemetryTaskHandle = osThreadCreate(osThread(telemetryTask), NULL);
-    if (NULL == telemetryTaskHandle)
-    {
-        printf("[%s, L%d] create thread failed.\r\n",
-            __FILE__, __LINE__);
-        return -1;
-    }
-
-    HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
-    HAL_NVIC_EnableIRQ(USART3_IRQn);
-
     return 0;
-}
-
-/* USART3 init function */
-void telemetry_uart3_init(void)
-{
-
-    huart3.Instance = USART3;
-    huart3.Init.BaudRate = 57600;
-    huart3.Init.WordLength = UART_WORDLENGTH_8B;
-    huart3.Init.StopBits = UART_STOPBITS_1;
-    huart3.Init.Parity = UART_PARITY_NONE;
-    huart3.Init.Mode = UART_MODE_TX_RX;
-    huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_UART_Init(&huart3);
-
-    return;
 }
 
 void telemetry_mavlink_proc(uint8_t c)
@@ -142,22 +106,22 @@ void telemetry_mavlink_proc(uint8_t c)
         switch (msg.msgid)
         {
             case MAVLINK_MSG_ID_HEARTBEAT:
-			{
+            {
                 heartbeat_cnt++;
                 mavlink_active = true;
                 target_system.sysid = msg.sysid;
                 target_system.compid = msg.compid;
 
-				telemetry.heartbeat.base_mode =
-					mavlink_msg_heartbeat_get_base_mode(&msg);
-				telemetry.heartbeat.custom_mode =
-					mavlink_msg_heartbeat_get_custom_mode(&msg);
-				telemetry.heartbeat.type =
-					mavlink_msg_heartbeat_get_type(&msg);
-				telemetry.heartbeat.system_status =
-					mavlink_msg_heartbeat_get_system_status(&msg);
+                telemetry.heartbeat.base_mode =
+                  mavlink_msg_heartbeat_get_base_mode(&msg);
+                telemetry.heartbeat.custom_mode =
+                  mavlink_msg_heartbeat_get_custom_mode(&msg);
+                telemetry.heartbeat.type =
+                  mavlink_msg_heartbeat_get_type(&msg);
+                telemetry.heartbeat.system_status =
+                  mavlink_msg_heartbeat_get_system_status(&msg);
 
-				last_heart_beat_time = timer_1ms;
+                last_heart_beat_time = timer_1ms;
                 if (waitting_for_heartbeat)
                 {
                     request_send = true;
@@ -167,7 +131,7 @@ void telemetry_mavlink_proc(uint8_t c)
             break;
             case MAVLINK_MSG_ID_SYS_STATUS:
             {
-				telemetry.sys_status.voltage_battery =
+                telemetry.sys_status.voltage_battery =
                     mavlink_msg_sys_status_get_voltage_battery(&msg);
                 telemetry.sys_status.current_battery =
                     mavlink_msg_sys_status_get_current_battery(&msg);
@@ -177,11 +141,11 @@ void telemetry_mavlink_proc(uint8_t c)
 			break;
 			case MAVLINK_MSG_ID_GPS_RAW_INT:
             {
-				telemetry.gps_raw.lat = mavlink_msg_gps_raw_int_get_lat(&msg);
+                telemetry.gps_raw.lat = mavlink_msg_gps_raw_int_get_lat(&msg);
                 telemetry.gps_raw.lon = mavlink_msg_gps_raw_int_get_lon(&msg);
                 telemetry.gps_raw.fix_type = mavlink_msg_gps_raw_int_get_fix_type(&msg);
                 telemetry.gps_raw.satellites_visible =
-					mavlink_msg_gps_raw_int_get_satellites_visible(&msg);
+                  mavlink_msg_gps_raw_int_get_satellites_visible(&msg);
 			}
 			break;
 			case MAVLINK_MSG_ID_VFR_HUD:
@@ -214,17 +178,6 @@ void telemetry_mavlink_proc(uint8_t c)
     return;
 }
 
-void USART3_IRQHandler(void)
-{
-    uint8_t c;
-    if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) != RESET)
-    {
-        c = huart3.Instance->DR;
-        //printf("0x%x \r\n", c);
-        telemetry_mavlink_proc(c);
-    }
-}
-
 void telemetry_data_request_read(void)
 {
     mavlink_message_t msg;
@@ -239,18 +192,18 @@ void telemetry_data_request_read(void)
 
         len = mavlink_msg_to_send_buffer(buf, &msg);
 
-        HAL_UART_Transmit(&huart3, buf, len, 5000);
+        HAL_USART_Transmit(&hsuart3, buf, len, 5000);
     }
 
     return;
 }
 
 void telemetry_data_encode_lock(void){
-    __HAL_UART_DISABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_USART_DISABLE_IT(&hsuart3, UART_IT_RXNE);
 }
 
 void telemetry_data_encode_unlock(void){
-    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_USART_ENABLE_IT(&hsuart3, UART_IT_RXNE);
 }
 
 uint8_t telemetry_data_encode(void* out_buf){
@@ -271,6 +224,22 @@ uint8_t telemetry_data_encode(void* out_buf){
     telemetry_data_encode_unlock();
 
     return len;
+}
+
+void telemetry_data_decode(void* buf, TELEMETRY_DATA* data){
+
+    data->heartbeat.base_mode = _TELEMETRY_MAV_ARMED_GET(buf);
+    data->heartbeat.type = _TELEMETRY_MAV_TYPE_GET(buf);
+    data->heartbeat.custom_mode = _TELEMETRY_MAV_CUSTOM_MODE_GET(buf);
+
+   _TELEMETRY_MAV_BATTERY_VOLT_CPY(buf, &data->sys_status.voltage_battery);
+    _TELEMETRY_MAV_BATTERY_CURRENT_CPY(buf, &data->sys_status.current_battery);
+    data->sys_status.battery_remaining = _TELEMETRY_MAV_BATTERY_REMAIN_GET(buf);
+
+    _TELEMETRY_MAV_ATTITUDE_ROLL_CPY(buf, &data->attitude.roll);
+    _TELEMETRY_MAV_ATTITUDE_PITCH_CPY(buf, &data->attitude.pitch);
+
+    _TELEMETRY_MAV_HUD_HEADING_CPY(buf, &data->vfr_hud.heading);
 }
 
 uint8_t telemetry_push_data(void** out_buf, uint8_t (*pFunc)(void*)){
@@ -325,7 +294,6 @@ uint8_t telemetry_push_rssi(void* buf){
     return sizeof(uint8_t);
 }
 
-
 // 5 Bytes
 uint8_t telemetry_push_volt_cur
 (
@@ -348,7 +316,6 @@ uint8_t telemetry_push_volt_cur
 
     return len;
 }
-
 
 // gps fix type and satellites num.
 // 2 Bytes
@@ -417,7 +384,7 @@ void telemetry_process_task(void const *argument)
     uint32_t i;
     argument = argument;
 
-    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_USART_ENABLE_IT(&hsuart3, UART_IT_RXNE);
 
     for (;;)
     {

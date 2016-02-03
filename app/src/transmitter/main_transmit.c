@@ -45,6 +45,8 @@
 #include "pcm_decoder.h"
 #include "key.h"
 #include "Main_transmit.h"
+#include "telemetry_common.h"
+#include "telemetry_transmitter.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -60,8 +62,6 @@ TIM_HandleTypeDef htim3;
 //TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart3;
-
 
 osThreadId defaultTaskHandle;
 
@@ -117,7 +117,6 @@ int main(void)
     pcm_decoder_init();
     MX_TIM3_Init();
     MX_USART1_UART_Init();
-	MX_USART3_UART_Init();
 
     /* USER CODE BEGIN 2 */
 
@@ -137,6 +136,10 @@ int main(void)
     
 //    key_init();		//no need for transmiter--leon
     __enable_irq();
+
+    telemetry_init(NULL, telemetry_comm_proc, 115200);
+    printf("telemetry_init ok .\r\n");
+    
     (void)radio_device_init();
 
     printf("system init ok, create tasks ...\r\n");
@@ -213,23 +216,6 @@ void MX_USART1_UART_Init(void)
   HAL_UART_Init(&huart1);
 
 }
-
-/* USART3 init function */
-void MX_USART3_UART_Init(void)
-{
-
-  huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
-  huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
-  huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init(&huart3);
-
-}
-
 
 /** Pinout Configuration
 */
@@ -460,34 +446,7 @@ void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim)
 
 void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
 {
-    PPM_ENCODER ppm;
-    uint16_t dummy;
-    
-    if (htim->Instance == TIM1)
-    {
-        //printf("T1 UP\r\n");
-        #if 1
-        __HAL_TIM_CLEAR_IT(htim, TIM_SR_UIF);
-        htim->Instance->ARR = *p_ppm_pulse_seqence;
-        p_ppm_pulse_seqence++;
-        if ((*p_ppm_pulse_seqence) == 0)
-        {
-            radio_get_pload((uint8_t*)ppm.channels);
-            ppm.stop_pulse_width = PPM_STOP_PULSE_WIDTH;
-            ppm.valid_chan_num = 8;
-            ppm_encoder(&ppm, ppm_pulse_seqence, &dummy);
-
-            htim->Instance->CCR2 = dummy;
-            
-            //printf("T8En\r\n");
-            __HAL_TIM_CLEAR_IT(htim, TIM_SR_CC2IF);
-            /* Enable the TIM Capture/Compare 2 interrupt */
-            __HAL_TIM_ENABLE_IT(htim, TIM_IT_CC2);
-            //__HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
-            p_ppm_pulse_seqence = &ppm_pulse_seqence[0];
-        }
-        #endif
-    }
+   
 }
 
 void _init (void)

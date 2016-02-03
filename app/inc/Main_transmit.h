@@ -11,6 +11,5 @@
 #define	SPORT_RX_PIN		GPIO_PIN_11
 #define	SPORT_TR_PORT		GPIOB
 
-
 #endif
 
