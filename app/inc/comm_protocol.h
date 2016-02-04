@@ -14,8 +14,13 @@
 // STX 0xFE
 // LEN payload length
 // MSG message id 
-//     #0 set protocol type. len = 1, payload = 0 UART, payload = 1 PPM
-//     #1 do pair len = 2 payload = rx_num, binding/normal
+//     #0 set protocol type. 
+//        .len = 1
+//        .payload[0] = 0 or 1  0-UART 1-PPM
+//     #1 do pair 
+//        .len = 2 
+//        .payload[0] = rx_num
+//        .payload[1] = binding or normal   0-normal 1-binding
 //     #2 channel values len = n, payload = n Bytes
 //     #3 radio ack data len = n, payload = n Bytes
 // CK  XOR check
