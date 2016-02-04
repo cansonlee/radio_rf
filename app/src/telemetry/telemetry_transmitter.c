@@ -62,7 +62,7 @@ void telemetry_radio_ack_send(void* buf, uint8_t len){
     uint8_t ret_len;
     comm_message_t msg;
 
-    ret_len = comm_protocol_msg_pack(buf, len, &msg);
+    ret_len = comm_protocol_msg_pack(COMM_MSG_RECEIVED_ACK, buf, len, &msg);
     
     if (len <= 0){
         return;
