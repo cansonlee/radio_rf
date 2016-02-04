@@ -72,7 +72,7 @@ typedef struct {
 #define _COMM_MSG_ADDR(msg) (&(msg)->magic1)
 
 void comm_protocol_parse(uint8_t c, void (*pfParsedHook)(comm_message_t*));
-int8_t comm_protocol_msg_pack(void*buf, uint8_t len, comm_message_t* msg);
+int8_t comm_protocol_msg_pack(uint8_t id, void*buf, uint8_t len, comm_message_t* msg);
 
 #endif
 

@@ -134,7 +134,8 @@ void comm_protocol_checksum_update(comm_message_t* msg, uint8_t c){
 
 // return the length of the message need to send
 // < 0 error
-int8_t comm_protocol_msg_pack(void*buf, uint8_t len, comm_message_t* msg){
+// packed msg stored in param msg
+int8_t comm_protocol_msg_pack(uint8_t id, void*buf, uint8_t len, comm_message_t* msg){
 
     uint8_t* ptr = buf;
         
@@ -144,7 +145,7 @@ int8_t comm_protocol_msg_pack(void*buf, uint8_t len, comm_message_t* msg){
     msg->len = len;
     comm_protocol_checksum_start(msg, len);
 
-    msg->msgid = COMM_MSG_RECEIVED_ACK;
+    msg->msgid = id;
     comm_protocol_checksum_update(msg, msg->msgid);
     
     if (len > 0){
