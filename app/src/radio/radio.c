@@ -107,6 +107,7 @@ void radio_device_task(void const *argument)
 
         //rx_num = pcm_rxnum_get();
         rx_num = telemetry_rxnum_get();
+        printf("rx_num %d\n", rx_num);
         if (rx_num != rx_num_last)
         {
             (void)pairing_list_addr_read(rx_num, radio_data_rx_addr);
@@ -136,6 +137,7 @@ void radio_device_task(void const *argument)
             {
                 //pcm_ppm_channel_get(pload, RF_PAYLOAD_LENGTH);
                 telemetry_transmitter_channel_get(pload, RF_PAYLOAD_LENGTH);
+                printf("channel pload %x\n", pload);
                 if (gzll_tx_data(pload, GZLL_MAX_FW_PAYLOAD_LENGTH, 2))
                 {
 
