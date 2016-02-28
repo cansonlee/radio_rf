@@ -22,6 +22,7 @@ void comm_protocol_parsed_hook(comm_message_t* msg){
     switch(msg->msgid){
         case COMM_MSG_DO_PAIR:
             comm_pair_rx_num = msg->payload[0];
+			//printf("rx_num from main is:%d @ %s, %s, L%d\r\n", comm_pair_rx_num, __FILE__, __func__, __LINE__);
             comm_working_mode = msg->payload[1];
         break;
         case COMM_MSG_SEND_CHANNELS:
@@ -32,6 +33,8 @@ void comm_protocol_parsed_hook(comm_message_t* msg){
         default:
         break;
     }
+	extern void radio_active(void);
+	radio_active();
 }
 
 void telemetry_comm_proc(uint8_t c){

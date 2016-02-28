@@ -1127,6 +1127,7 @@ void gzll_radio_isr_function(void)
   //If "received data ready" interrupt from radio
   if(status & ((1<<RX_DR)))
   {
+  	//printf("nrf24l01 recv ready @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
     dbg_int_rx_dr++;
     gzll_rx_dr = true;
     gzll_rx_power_high_f = hal_nrf_get_carrier_detect();
@@ -1153,6 +1154,7 @@ void gzll_radio_isr_function(void)
   if((status & (1<<MAX_RT)) || (status & ((1<<TX_DS))))
   {
     tries = hal_nrf_get_transmit_attempts() + 1;
+	//printf("nrf24l01 retransmit attempts %d @ %s, %s, %d\r\n", tries, __FILE__, __func__, __LINE__);
     gzll_tries_pr_channel_counter -= tries;
     gzll_try_counter += tries;
   }
@@ -1161,6 +1163,7 @@ void gzll_radio_isr_function(void)
   //If "data sent" interrupt from radio
   if(status & (1<<TX_DS))
   {
+  	//printf("nrf24l01 data send @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
     dbg_int_tx_ds++;
     #ifndef GZLL_HOST_ONLY
     if(gzll_state_var == GZLL_DEVICE_ACTIVE)
@@ -1218,6 +1221,8 @@ void gzll_radio_isr_function(void)
 
     gzll_timeout_counter += tries;
     temp = gzll_dyn_params[GZLL_PARAM_TX_TIMEOUT];
+
+	//printf("nrf24l01 max retransmit %d @ %s, %s, %d\r\n", gzll_timeout_counter, __FILE__, __func__, __LINE__);
 
     // If TX has timed out, or user has called gzll_goto_idle()
     if((temp != 0 && gzll_timeout_counter >= temp) ||

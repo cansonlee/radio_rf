@@ -35,8 +35,8 @@ extern TIM_HandleTypeDef htim3;
 #define RF_INT_DISABLE()  __HAL_GPIO_EXTI_DISABLE_IT(GPIO_PIN_4)
 
 /** @brief Defines the timer interrupt enable bit*/
-#define TIMER_INT_ENABLE()  __HAL_TIM_ENABLE_IT(&htim0, TIM_IT_UPDATE);
-#define TIMER_INT_DISABLE() __HAL_TIM_DISABLE_IT(&htim0, TIM_IT_UPDATE);
+#define TIMER_INT_ENABLE()  __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
+#define TIMER_INT_DISABLE() __HAL_TIM_DISABLE_IT(&htim3, TIM_IT_UPDATE);
 
 #else
 

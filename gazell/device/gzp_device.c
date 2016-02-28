@@ -254,6 +254,7 @@ bool gzp_address_req_send(uint8_t idx)
     {
       if(!gzp_tx_packet(address_req, GZP_CMD_HOST_ADDRESS_REQ_PAYLOAD_LENGTH, 0))
       {
+      	//printf("send packet fail @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
         break;
       }
     }
@@ -262,12 +263,14 @@ bool gzp_address_req_send(uint8_t idx)
 
     // Send message for fetching pairing response from host.
     address_req[0] = GZP_CMD_HOST_ADDRESS_FETCH;
-
+	//printf("before fetch host addr @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
     if(gzp_tx_packet(&address_req[0], GZP_CMD_HOST_ADDRESS_REQ_PAYLOAD_LENGTH, 0))
     {
+      //printf("fetch host addr package send successful @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
       // If pairing response received
       if(gzll_rx_fifo_read(rx_payload, NULL, NULL))
       {
+      	printf("fetch host addr, read rx_payload[0]=%d @ %s, %s, %d\r\n", rx_payload[0], __FILE__, __func__, __LINE__);
         if(rx_payload[0] == GZP_CMD_HOST_ADDRESS_RESP)
         {
           memcpy(gzp_system_address, &rx_payload[GZP_CMD_HOST_ADDRESS_RESP_ADDRESS], GZP_SYSTEM_ADDRESS_WIDTH);
@@ -275,12 +278,14 @@ bool gzp_address_req_send(uint8_t idx)
 
           pairing_list_addr_write(idx, gzp_system_address);
           retval = true;
+		  printf("addr resp success @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
         }
       }
     }
     else
     {
       gzp_delay_rx_periods(GZP_NOT_PROXIMITY_BACKOFF_RX_TIMEOUT - GZP_TX_ACK_WAIT_TIMEOUT);
+	  //printf("fetch host addr package send fail @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
     }
 
     gzp_delay_rx_periods(GZP_STEP1_RX_TIMEOUT);

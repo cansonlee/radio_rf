@@ -174,11 +174,13 @@ void gzp_host_execute()
   if((rx_pipe == GZP_PAIRING_PIPE) || ((rx_pipe == GZP_DATA_PIPE) && (gzp_encrypted_user_data_length == 0)))
   {
     gzll_rx_fifo_read(rx_payload, &payload_length, NULL);
-
+	//printf("gzll_rx_fifo_read rx_payload[0]: %#x, @ %s,%s,%d\r\n", rx_payload[0], __FILE__, __func__, __LINE__);
     switch(rx_payload[0])
     {
-      case GZP_CMD_HOST_ADDRESS_REQ:
+      case GZP_CMD_HOST_ADDRESS_REQ:	  	
         gzp_process_address_req(rx_payload);
+//		uint8_t resp[5] = {0x55, 0x33, 0x22, 0x66, 0x11};
+//		gzll_ack_payload_write(&resp[0], 1, 0);
         break;
 
       #ifndef GZP_CRYPT_DISABLE
@@ -210,6 +212,7 @@ void gzp_host_execute()
   // Restart reception if "not proximity backoff" period has elapsed
   if(gzll_get_state() == GZLL_IDLE)
   {
+  	printf("GZLL_IDLE @ %s,%s,%d\r\n", __FILE__, __func__, __LINE__);
     gzll_set_param(GZLL_PARAM_RX_TIMEOUT, 0);
     if(gzp_pairing_enabled_f)
     {
@@ -251,7 +254,21 @@ static void gzp_process_address_req(uint8_t* gzp_req)
     // Build pairing response packet
     pairing_resp[0] = GZP_CMD_HOST_ADDRESS_RESP;
     gzp_host_chip_id_read(&pairing_resp[GZP_CMD_HOST_ADDRESS_RESP_ADDRESS], GZP_SYSTEM_ADDRESS_WIDTH);
-    gzll_ack_payload_write(&pairing_resp[0], GZP_CMD_HOST_ADDRESS_RESP_PAYLOAD_LENGTH, 0);
+    //gzll_ack_payload_write(&pairing_resp[0], GZP_CMD_HOST_ADDRESS_RESP_PAYLOAD_LENGTH, 0);
+   
+    if(!gzll_ack_payload_write(&pairing_resp[0], GZP_CMD_HOST_ADDRESS_RESP_PAYLOAD_LENGTH, 0))
+	{	
+#if 0	
+		printf("ack payload write successful, pairing_resp: @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
+		for(uint8_t i; i<GZP_CMD_HOST_ADDRESS_RESP_PAYLOAD_LENGTH; i++)
+		{
+			printf("pairing_resp[%d]=%#x ",i,pairing_resp[i]);
+		}
+		printf("\r\n");
+#endif
+		printf("ack payload write fail @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
+	}
+	
     gzll_set_param(GZLL_PARAM_RX_TIMEOUT, GZP_STEP1_RX_TIMEOUT);
 
     // Enable only pairing pipe when waiting for pairing request step 1
@@ -262,6 +279,7 @@ static void gzp_process_address_req(uint8_t* gzp_req)
     {
       if(gzll_rx_fifo_read(&gzp_req[0], NULL, NULL))
       {
+      	//printf("gzll_rx_fifo_read gzp_req[0]: %#x, @ %s,%s,%d\r\n", gzp_req[0], __FILE__, __func__, __LINE__);
         // Validate step 1 of pairing request
         if(gzp_req[0] == GZP_CMD_HOST_ADDRESS_FETCH)
         {

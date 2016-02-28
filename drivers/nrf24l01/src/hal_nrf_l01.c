@@ -760,6 +760,7 @@ uint8_t hal_nrf_read_reg(uint8_t reg)
   temp = hal_nrf_rw(0);
   CSN_HIGH();
 
+  //printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", reg, temp, __FILE__, __func__, __LINE__);
   //__HAL_GPIO_EXTI_RESTORE(flag, GPIO_PIN_1);
 
   return temp;
@@ -776,6 +777,8 @@ uint8_t hal_nrf_write_reg(uint8_t reg, uint8_t value)
   hal_nrf_rw(value);
   CSN_HIGH();
   //__HAL_GPIO_EXTI_RESTORE(flag, GPIO_PIN_1);
+
+//  printf("write reg:%#x, retval:%#x @ %s, %s, %d\r\n", reg, retval, __FILE__, __func__, __LINE__);
   return retval;
 }
 

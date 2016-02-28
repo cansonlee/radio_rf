@@ -53,6 +53,7 @@ void USART3_IRQHandler(void);
 
 extern void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim);
 extern void HAL_TIM_CcCallback(TIM_HandleTypeDef *htim);
+extern void usart3_irq_handler_callback(void);
 /******************************************************************************/
 /*            Cortex-M3 Processor Interruption and Exception Handlers         */ 
 /******************************************************************************/
@@ -107,7 +108,8 @@ void EXTI4_IRQHandler(void)
 
 void USART3_IRQHandler(void)
 {
-    HAL_UART_IRQHandler(&huart3);
+    //HAL_UART_IRQHandler(&huart3);
+    usart3_irq_handler_callback();
 }
 
 

@@ -118,6 +118,18 @@ int main(void)
     MX_TIM3_Init();
     MX_USART1_UART_Init();
 
+	/* MCO */
+	GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	RCC->CFGR &= ~RCC_CFGR_MCO;
+	RCC->CFGR |= RCC_CFGR_MCO_PLLCLK_DIV2;
+	printf("RCC->CR=%#x, RCC->CFGR=%#x, RCC->APB1ENR=%#x @ %s, %s, %d\r\n", RCC->CR,RCC->CFGR,RCC->APB1ENR, __FILE__, __func__, __LINE__);
+
     /* USER CODE BEGIN 2 */
 
     /* USER CODE END 2 */
@@ -238,6 +250,7 @@ void MX_GPIO_Init(void)
 
     HAL_GPIO_WritePin(SPORT_ON_PORT, SPORT_ON_PIN, GPIO_PIN_SET);		//默认SPORT接口为发送状态
 
+#if 0
 	/* SPORT_TX_PIN */
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;		//UART3_TX
     GPIO_InitStruct.Pin = SPORT_TX_PIN;
@@ -246,11 +259,12 @@ void MX_GPIO_Init(void)
     HAL_GPIO_Init(SPORT_TR_PORT, &GPIO_InitStruct);
 
 	/* SPORT_RX_PIN */
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;		//UART3_RX
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_INPUT;		//UART3_RX
     GPIO_InitStruct.Pin = SPORT_RX_PIN;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(SPORT_TR_PORT, &GPIO_InitStruct);
+#endif	
     
     /* NRF_IRQ */
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -357,7 +371,7 @@ void MX_TIM3_Init(void)
     TIM_MasterConfigTypeDef sMasterConfig;
 
     htim3.Instance = TIM3;
-    htim3.Init.Prescaler = 72 - 1;  /* 1MHz */
+    htim3.Init.Prescaler = 36 - 1; //72 - 1;  /* 1MHz */
     htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim3.Init.Period = 0xffff;
     htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -417,8 +431,15 @@ void StartDefaultTask(void const * argument)
     /* Infinite loop */
     for(;;)
     {
-        osDelay(100);
+        osDelay(1000);
         HAL_GPIO_TogglePin(HEART_BEAT_PORT, HEART_BEAT_PIN);
+
+		extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr;
+        printf("dbg_tx_retrans=%d \r\n", dbg_tx_retrans);
+        printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
+        printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
+		printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr); 
+		printf("e: %d, f: %d\r\n", hal_nrf_rx_fifo_empty(), hal_nrf_rx_fifo_full());
     }
 
     /* USER CODE END 5 */ 

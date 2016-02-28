@@ -88,6 +88,8 @@ static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim);
 void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim);
+void HAL_JTAG_Set(uint8_t mode);
+
 
 /* USER CODE BEGIN PFP */
 
@@ -119,6 +121,17 @@ int main(void)
     MX_TIM3_Init();
     MX_USART1_UART_Init();
 
+	/* MCO */
+	GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	RCC->CFGR &= ~RCC_CFGR_MCO;
+	RCC->CFGR |= RCC_CFGR_MCO_PLLCLK_DIV2;
+	printf("RCC->CR=%#x, RCC->CFGR=%#x, RCC->APB1ENR=%#x @ %s, %s, %d\r\n", RCC->CR,RCC->CFGR,RCC->APB1ENR, __FILE__, __func__, __LINE__);
     /* USER CODE BEGIN 2 */
 
     /* USER CODE END 2 */
@@ -140,6 +153,7 @@ int main(void)
     host_addr_init();
 
     key_init();
+	HAL_JTAG_Set(2);
     (void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
     printf("telemetry_init ok .\r\n");
     
@@ -380,7 +394,7 @@ void MX_TIM3_Init(void)
     TIM_MasterConfigTypeDef sMasterConfig;
 
     htim3.Instance = TIM3;
-    htim3.Init.Prescaler = 72 - 1;  /* 1MHz */
+    htim3.Init.Prescaler = 36 - 1; //72 - 1;  /* 1MHz */
     htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim3.Init.Period = 0xffff;
     htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -467,7 +481,7 @@ extern uint32_t heartbeat_cnt;
 extern uint8_t gzll_chm_get_current_rx_channel(void);
 
 void StartDefaultTask(void const * argument)
-{
+{	
     argument = argument;
     /*## FatFS: Link the USER driver ###########################*/
     retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
@@ -488,13 +502,59 @@ void StartDefaultTask(void const * argument)
 
         printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
         */
-        printf("hb:%d\r\n", heartbeat_cnt);
+//        printf("hb:%d\r\n", heartbeat_cnt);
 
 		if (KEY0_PRES == key_scan(0))
 		{
 			printf("key 0 pressed, enter pairing status ...\r\n");
 			radio_pairing_status_set(true);
+			//uint8_t resp[5] = {0x55, 0x33, 0x22, 0x66, 0x11};
+			//gzll_ack_payload_write(&resp[0], 5, 0);
 		}
+
+		extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr;
+		uint8_t addr[5];
+		uint8_t temp;
+		
+        printf("dbg_tx_retrans=%d \r\n", dbg_tx_retrans);
+        printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
+        printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
+		printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr);
+
+		temp = hal_nrf_get_address(HAL_NRF_PIPE0, addr);
+		printf("the addr of p0 is:");
+		for(uint8_t i=0; i<5; i++)
+		{
+			printf("%#x ", addr[i]);
+		}
+		printf("\r\n");
+
+		hal_nrf_get_address(HAL_NRF_PIPE1, addr);
+		printf("the addr of p1 is:");
+		for(uint8_t i=0; i<5; i++)
+		{
+			printf("%#x ", addr[i]);
+		}
+		printf("\r\n");
+		
+		temp = hal_nrf_read_reg(RX_ADDR_P2);
+		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P2, temp, __FILE__, __func__, __LINE__);
+		temp = hal_nrf_read_reg(RX_ADDR_P3);
+		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P3, temp, __FILE__, __func__, __LINE__);
+		temp = hal_nrf_read_reg(RX_ADDR_P4);
+		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P4, temp, __FILE__, __func__, __LINE__);
+		temp = hal_nrf_read_reg(RX_ADDR_P5);
+		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P5, temp, __FILE__, __func__, __LINE__);
+
+		hal_nrf_get_address(HAL_NRF_TX, addr);
+		printf("the addr of tx is:");
+		for(uint8_t i=0; i<5; i++)
+		{
+			printf("%#x ", addr[i]);
+		}
+		printf("\r\n");
+		
+		osDelay(1000);
 
     }
 
@@ -619,6 +679,22 @@ void assert_failed(uint8_t* file, uint32_t line)
 }
 
 #endif
+
+//JTAG模式设置,用于设置JTAG的模式
+//mode:jtag,swd模式设置;00,全使能;01,使能SWD;10,全关闭;	   
+//#define JTAG_SWD_DISABLE   0X02
+//#define SWD_ENABLE         0X01
+//#define JTAG_SWD_ENABLE    0X00		  
+void HAL_JTAG_Set(uint8_t mode)
+{
+	uint32_t temp;
+	temp=mode;
+	temp<<=25;
+	RCC->APB2ENR|=1<<0;     //开启辅助时钟	   
+	AFIO->MAPR&=0XF8FFFFFF; //清除MAPR的[26:24]
+	AFIO->MAPR|=temp;       //设置jtag模式
+}
+
 
 /**
   * @}

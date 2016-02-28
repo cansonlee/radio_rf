@@ -18,7 +18,7 @@
 #ifndef GZLL_PARAMETERS_H__
 #define GZLL_PARAMETERS_H__
 
-#define GZLL_DEFAULT_CHANNEL_TAB {3, 23, 40, 61, 75}  // [RF channels]
+#define GZLL_DEFAULT_CHANNEL_TAB 	{3, 23, 40, 61, 75}  // [RF channels]
 #define GZLL_DEFAULT_CHANNEL_TAB_SIZE 5               // [bytes]
 
 #define GZLL_DEFAULT_ADDRESS_PIPE0 {1, 3, 6, 9, 12}          
