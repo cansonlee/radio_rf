@@ -184,7 +184,7 @@ void radio_device_task(void const *argument)
 		temp = hal_nrf_read_reg(FIFO_STATUS);
     	printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", FIFO_STATUS, temp, __FILE__, __func__, __LINE__);
 #endif		
-
+#if 0
         rx_num = telemetry_rxnum_get();
         //printf("rx_num %d\n", rx_num);
         if (rx_num != rx_num_last)
@@ -199,7 +199,7 @@ void radio_device_task(void const *argument)
 			printf("\r\n");
             rx_num_last = rx_num;
         }
-
+#endif
         if (telemetry_transmitter_mode_get() == TRANSMITTING_MODE_BINDING)
         {
             osDelay(100);
@@ -338,14 +338,7 @@ void radio_host_task(void const * argument)
     gzp_init();
     gzp_pairing_enable(true);
     gzll_set_param(GZLL_PARAM_RX_PIPES, gzll_get_param(GZLL_PARAM_RX_PIPES) | (1 << 2));
-#if 0
-	hal_nrf_set_rx_payload_width(HAL_NRF_PIPE0, 32);
-	hal_nrf_set_rx_payload_width(HAL_NRF_PIPE1, 32);
-	hal_nrf_set_rx_payload_width(HAL_NRF_PIPE2, 32);
-	hal_nrf_set_rx_payload_width(HAL_NRF_PIPE3, 32);
-	hal_nrf_set_rx_payload_width(HAL_NRF_PIPE4, 32);
-	hal_nrf_set_rx_payload_width(HAL_NRF_PIPE5, 32);
-#endif	
+	
     gzll_rx_start();
 	printf("gzll_rx_start @ %s, %s, %d\r\n",  __FILE__, __func__, __LINE__);
 	

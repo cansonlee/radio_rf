@@ -120,18 +120,7 @@ int main(void)
 	MX_TIM1_Init();
     MX_TIM3_Init();
     MX_USART1_UART_Init();
-
-	/* MCO */
-	GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_8;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-	RCC->CFGR &= ~RCC_CFGR_MCO;
-	RCC->CFGR |= RCC_CFGR_MCO_PLLCLK_DIV2;
-	printf("RCC->CR=%#x, RCC->CFGR=%#x, RCC->APB1ENR=%#x @ %s, %s, %d\r\n", RCC->CR,RCC->CFGR,RCC->APB1ENR, __FILE__, __func__, __LINE__);
+	
     /* USER CODE BEGIN 2 */
 
     /* USER CODE END 2 */
@@ -150,7 +139,6 @@ int main(void)
 
     __enable_irq();
     (void)led_init();
-    host_addr_init();
 
     key_init();
 	HAL_JTAG_Set(2);
