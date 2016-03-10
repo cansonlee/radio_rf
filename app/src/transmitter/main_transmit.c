@@ -149,7 +149,7 @@ int main(void)
 //    key_init();		//no need for transmiter--leon
     __enable_irq();
 
-    telemetry_init(NULL, telemetry_comm_proc, 115200);
+    //telemetry_init(NULL, telemetry_comm_proc, 115200);
     printf("telemetry_init ok .\r\n");
     
     (void)radio_device_init();
@@ -158,7 +158,7 @@ int main(void)
     
     /* Create the thread(s) */
     /* definition and creation of defaultTask */
-    osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 512);
+    osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
     defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
     /* USER CODE BEGIN RTOS_THREADS */
@@ -316,7 +316,7 @@ void MX_SPI1_Init(void)
     hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
     hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
     hspi1.Init.NSS = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4; //SPI_BAUDRATEPRESCALER_8;
     hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
     hspi1.Init.TIMode = SPI_TIMODE_DISABLED;
     hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
@@ -384,7 +384,7 @@ void MX_TIM3_Init(void)
     sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
     HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig);
 
-    HAL_NVIC_SetPriority(TIM3_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 1);
+    HAL_NVIC_SetPriority(TIM3_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 2, 1);
     HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
     HAL_TIM_Base_Start_IT(&htim3);
@@ -407,13 +407,17 @@ extern bool pairing_ok;
 extern uint8_t gzll_chm_get_current_rx_channel(void);
 
 uint8_t menu_idx;
+extern uint32_t test_retrans_times;
 void StartDefaultTask(void const * argument)
 {
     uint16_t id = 0;
+	extern void radio_active(void);
+	
+	
     argument = argument;
     uint8_t test_addr[4] = {0x33, 0x44, 0x55, 0x66};
     /*## FatFS: Link the USER driver ###########################*/
-    retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
+    //retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
 
     /* USER CODE BEGIN 5 */
     osDelay(1);
@@ -425,21 +429,25 @@ void StartDefaultTask(void const * argument)
 //    LCD_ShowString(30,40,200,24,24,"Mini STM32 ^_^");    
 
     /* enable TIM2 capture interrupt */
-    HAL_NVIC_EnableIRQ(TIM2_IRQn);
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+    //HAL_NVIC_EnableIRQ(TIM2_IRQn);
+    //HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 
     /* Infinite loop */
     for(;;)
     {
-        osDelay(1000);
-        HAL_GPIO_TogglePin(HEART_BEAT_PORT, HEART_BEAT_PIN);
-
+        osDelay(1);
+       // HAL_GPIO_TogglePin(HEART_BEAT_PORT, HEART_BEAT_PIN);
+       //radio_active();
+       
+       printf("test_retrans_times=%d \r\n", test_retrans_times);
+#if 0
 		extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr;
         printf("dbg_tx_retrans=%d \r\n", dbg_tx_retrans);
         printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
         printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
 		printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr); 
-		printf("e: %d, f: %d\r\n", hal_nrf_rx_fifo_empty(), hal_nrf_rx_fifo_full());
+		printf("rx-e:%d, rx-f:%d, tx-e:%d, tx-f:%d\r\n", hal_nrf_rx_fifo_empty(), hal_nrf_rx_fifo_full(), hal_nrf_tx_fifo_empty(),hal_nrf_tx_fifo_full());
+#endif		
     }
 
     /* USER CODE END 5 */ 

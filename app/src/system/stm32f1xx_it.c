@@ -40,7 +40,7 @@
 
 /* USER CODE END 0 */
 /* External variables --------------------------------------------------------*/
- 
+ uint32_t test_exti0_times = 0;
 extern void xPortSysTickHandler(void);
 void TIM2_IRQHandler(void);
 void TIM3_IRQHandler(void);
@@ -74,6 +74,11 @@ void SysTick_Handler(void)
 
   /* USER CODE END SysTick_IRQn 1 */
 }
+
+void HardFault_Handler(void)
+{
+	printf("%s\r\n", __func__);
+}
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
@@ -99,6 +104,7 @@ void TIM3_IRQHandler(void)
 void EXTI0_IRQHandler(void)
 {
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+	test_exti0_times++;
 }
 
 void EXTI4_IRQHandler(void)

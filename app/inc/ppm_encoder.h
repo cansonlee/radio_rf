@@ -4,6 +4,7 @@
 #define PPM_MAX_CHANNELS              (20)
 #define PPM_RANGE                     (512)
 #define PPM_CENTER                    (1500)
+#define PPM_MAX_VAL					  (2000)
 #define PPM_FRAME_LENGTH_DEFAULT      (22500)           /* 22.5 ms */
 #define PPM_STOP_PULSE_WIDTH          (300)
   

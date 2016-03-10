@@ -39,7 +39,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         //flag = gzll_interupts_save();
         do
         {
-            gzll_radio_isr_function();
+            gzll_radio_isr_function();			
         } while(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == GPIO_PIN_RESET);
         //gzll_interupts_restore(flag);
     }
@@ -49,7 +49,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		dbg_exit1_int_cnt++;
 		//flag = gzll_interupts_save();
 		do
-		{
+		{			
 			gzll_radio_isr_function();
 		} while(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == GPIO_PIN_RESET);
 		//gzll_interupts_restore(flag);

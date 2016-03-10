@@ -174,13 +174,10 @@ void gzp_host_execute()
   if((rx_pipe == GZP_PAIRING_PIPE) || ((rx_pipe == GZP_DATA_PIPE) && (gzp_encrypted_user_data_length == 0)))
   {
     gzll_rx_fifo_read(rx_payload, &payload_length, NULL);
-	//printf("gzll_rx_fifo_read rx_payload[0]: %#x, @ %s,%s,%d\r\n", rx_payload[0], __FILE__, __func__, __LINE__);
     switch(rx_payload[0])
     {
       case GZP_CMD_HOST_ADDRESS_REQ:	  	
         gzp_process_address_req(rx_payload);
-//		uint8_t resp[5] = {0x55, 0x33, 0x22, 0x66, 0x11};
-//		gzll_ack_payload_write(&resp[0], 1, 0);
         break;
 
       #ifndef GZP_CRYPT_DISABLE
@@ -405,7 +402,8 @@ static bool gzp_set_host_id(const uint8_t* src)
   if(hal_flash_byte_read(GZP_PARAMS_STORAGE_ADR) == 0xff)
   {
     hal_flash_byte_write(GZP_PARAMS_STORAGE_ADR, 0x00);
-    hal_flash_bytes_write(GZP_PARAMS_STORAGE_ADR + 1, src, GZP_HOST_ID_LENGTH);
+//    hal_flash_bytes_write(GZP_PARAMS_STORAGE_ADR + 1, src, GZP_HOST_ID_LENGTH);
+	hal_flash_bytes_write(GZP_PARAMS_STORAGE_ADR + 2, src, GZP_HOST_ID_LENGTH*2);	//+2、*2 -- 16位地址对齐
     return true;
   }
   else
@@ -418,7 +416,8 @@ bool gzp_get_host_id(uint8_t* dst)
 {
   if(hal_flash_byte_read(GZP_PARAMS_STORAGE_ADR) == 0)
   {
-    hal_flash_bytes_read(GZP_PARAMS_STORAGE_ADR + 1, dst, GZP_HOST_ID_LENGTH);
+    //hal_flash_bytes_read(GZP_PARAMS_STORAGE_ADR + 1, dst, GZP_HOST_ID_LENGTH);
+    hal_flash_bytes_read(GZP_PARAMS_STORAGE_ADR + 2, dst, GZP_HOST_ID_LENGTH*2);	//+2、*2 -- 16位地址对齐
     return true;
   }
   else

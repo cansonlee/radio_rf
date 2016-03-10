@@ -29,7 +29,7 @@ void comm_protocol_parse(uint8_t c, void (*pfParsedHook)(comm_message_t*)){
 // return 0 or 1
 uint8_t comm_protocol_parse_char(uint8_t c, comm_message_t* r_message, comm_status_t* r_status){
     uint8_t msg_received = comm_protocol_frame_char(c, r_message, r_status);
-
+	
     if (msg_received == COMM_FRAMING_BAD_CHECK_SUM){
         m_comm_status.parse_state = COMM_PARSE_STATE_IDLE;
         m_comm_status.msg_received = COMM_FRAMING_INCOMPLETE;
@@ -96,12 +96,17 @@ uint8_t comm_protocol_frame_char_buffer(comm_message_t* rxmsg, comm_status_t* st
         break;
         case COMM_PARSE_STATE_GOT_PAYLOAD:
             if (c != rxmsg->calc_checksum){
-                status->parse_state = COMM_PARSE_STATE_GOT_BAD_XOR;
+                //status->parse_state = COMM_PARSE_STATE_GOT_BAD_XOR;
+                status->msg_received = COMM_FRAMING_BAD_CHECK_SUM;				
             }else {
-                status->parse_state = COMM_PARSE_STATE_GOT_XOR;
+                //status->parse_state = COMM_PARSE_STATE_GOT_XOR;
+                status->msg_received = COMM_FRAMING_OK;
             }
             rxmsg->payload[status->packet_idx] = c;
+			status->parse_state = COMM_PARSE_STATE_IDLE;
+			memcpy(r_message, rxmsg, sizeof(comm_message_t));
         break;
+#if 0		
         case COMM_PARSE_STATE_GOT_XOR:
         case COMM_PARSE_STATE_GOT_BAD_XOR:
             if (status->parse_state == COMM_PARSE_STATE_GOT_XOR){
@@ -113,6 +118,7 @@ uint8_t comm_protocol_frame_char_buffer(comm_message_t* rxmsg, comm_status_t* st
             status->parse_state = COMM_PARSE_STATE_IDLE;
             memcpy(r_message, rxmsg, sizeof(comm_message_t));
         break;
+#endif		
         default:
         break;
     }

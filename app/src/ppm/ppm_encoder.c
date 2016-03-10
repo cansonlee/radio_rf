@@ -13,8 +13,7 @@ int32_t ppm_encoder
     uint32_t rest_frame_length = PPM_FRAME_LENGTH_DEFAULT;
     uint16_t *p_pulse_seq = ppm_pulse_seqence;
     uint16_t pulse_width_one_chan;
-    
-
+//	return 0;
     for (i = 0; i < conf->valid_chan_num; i++)
     {
         if (conf->channels[i] == 0)
@@ -23,6 +22,10 @@ int32_t ppm_encoder
         }
         else
         {
+        	if(conf->channels[i] > PPM_MAX_VAL)
+    		{
+    			conf->channels[i] = PPM_MAX_VAL;
+    		}
             pulse_width_one_chan = conf->channels[i];
         }
         rest_frame_length -= pulse_width_one_chan;

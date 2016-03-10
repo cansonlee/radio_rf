@@ -105,7 +105,7 @@
   require GZP_DEVICE_PARAMS_STORAGE_SIZE bytes of memory, and 
   Host 11 bytes.
 */ 
-#define GZP_PARAMS_STORAGE_ADR 0x80018C00 // Typical definition for STM32F103C8
+#define GZP_PARAMS_STORAGE_ADR 0x0800FC00 // Typical definition for STM32F103C8
 //#define GZP_PARAMS_STORAGE_ADR 0xFC00 // Typical definition for nRF24LE1
 
 //#define GZP_PARAMS_STORAGE_ADR (31 * 512) // Typical definition for nRF24LU1
@@ -113,6 +113,6 @@
 /** 
   Number of bytes available for parameter storage in Device.
 */ 
-#define GZP_DEVICE_PARAMS_STORAGE_SIZE 512	//1024
+#define GZP_DEVICE_PARAMS_STORAGE_SIZE 1024
 
 #endif // GZP_PARAMS_H

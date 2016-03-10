@@ -274,6 +274,16 @@ uint8_t hal_nrf_get_clear_irq_flags(void)
   return (retval & (BIT_6|BIT_5|BIT_4));
 }
 
+uint8_t hal_nrf_irq_bits_get_n_clear(void)
+{
+	uint8_t retval;
+
+	retval = hal_nrf_nop() & (BIT_6|BIT_5|BIT_4);
+	hal_nrf_write_reg (STATUS, retval);
+
+	return retval;
+}
+
 uint8_t hal_nrf_clear_irq_flags_get_status(void)
 {
   uint8_t retval;
@@ -284,7 +294,6 @@ uint8_t hal_nrf_clear_irq_flags_get_status(void)
 
   return (retval);
 }
-
 
 void hal_nrf_clear_irq_flag(hal_nrf_irq_source_t int_source)
 {

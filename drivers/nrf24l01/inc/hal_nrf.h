@@ -115,6 +115,7 @@ void hal_nrf_write_ack_payload(uint8_t pipe, const uint8_t *tx_pload, uint8_t le
  * @retval 0x40 RX Data received interrupt
 */
 uint8_t hal_nrf_get_clear_irq_flags(void);
+uint8_t hal_nrf_irq_bits_get_n_clear(void);
 
 uint8_t hal_nrf_clear_irq_flags_get_status(void);
 

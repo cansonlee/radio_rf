@@ -200,7 +200,7 @@ LINK.cxx    = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS)
  
 # Delete the default suffixes
 .SUFFIXES:
- 
+.SECONDARY: $(PROGRAM).elf 
 all: $(PROGRAM).hex
  
 # Rules for creating dependency files (.d).

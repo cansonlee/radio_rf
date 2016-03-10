@@ -33,7 +33,7 @@
 //-----------------------------------------------------------------------------
 #define GZP_PARAMS_DB_ELEMENT_SYSTEM_ADDRESS 0
 #define GZP_PARAMS_DB_ELEMENT_HOST_ID (GZP_PARAMS_DB_ELEMENT_SYSTEM_ADDRESS + GZP_SYSTEM_ADDRESS_WIDTH)
-#define GZP_PARAMS_DB_ELEMENT_SIZE (GZP_SYSTEM_ADDRESS_WIDTH + GZP_HOST_ID_LENGTH)
+#define GZP_PARAMS_DB_ELEMENT_SIZE ((GZP_SYSTEM_ADDRESS_WIDTH + GZP_HOST_ID_LENGTH)*2)
 #define GZP_PARAMS_DB_MAX_ENTRIES 14            // [#elements]. Max 14.
 
 //-----------------------------------------------------------------------------
@@ -44,7 +44,7 @@
 #define GZP_PARAMS_DB_SIZE (GZP_PARAMS_DB_MAX_ENTRIES * GZP_PARAMS_DB_ELEMENT_SIZE)
 
 #define GZP_INDEX_DB_ADR (GZP_PARAMS_STORAGE_ADR + GZP_PARAMS_DB_SIZE)
-#define GZP_INDEX_DB_SIZE (GZP_DEVICE_PARAMS_STORAGE_SIZE - GZP_PARAMS_DB_SIZE)
+#define GZP_INDEX_DB_SIZE ((GZP_DEVICE_PARAMS_STORAGE_SIZE - GZP_PARAMS_DB_SIZE)/2)
 
 #if(GZP_DEVICE_PARAMS_STORAGE_SIZE < GZP_PARAMS_DB_SIZE)
   #error GZP_DEVICE_PARAMS_STORAGE_SIZE must be greater or equal to GZP_PAIRING_PARAMS_DB_SIZE
@@ -216,6 +216,20 @@ void gzp_init()
 
 #ifndef GZP_NV_STORAGE_DISABLE
   gzp_params_restore();
+
+  gzp_system_address[0] = *(uint8_t *)0x0800F800;
+  gzp_system_address[1] = *(uint8_t *)0x0800F802;
+  gzp_system_address[2] = *(uint8_t *)0x0800F804;
+  gzp_system_address[3] = *(uint8_t *)0x0800F806;
+
+  if(gzp_system_address[0] = 0xff)
+  {
+  	printf("system addr read from flash fail!\r\n");
+	gzp_system_address[0] = 0x57;
+	gzp_system_address[1] = 0xff;
+	gzp_system_address[2] = 0x73;
+	gzp_system_address[3] = 0x06;
+  }
 #endif
 
   // Update radio parameters from gzp_system_address
@@ -276,7 +290,21 @@ bool gzp_address_req_send(uint8_t idx)
           memcpy(gzp_system_address, &rx_payload[GZP_CMD_HOST_ADDRESS_RESP_ADDRESS], GZP_SYSTEM_ADDRESS_WIDTH);
           gzp_update_radio_params(&rx_payload[GZP_CMD_HOST_ADDRESS_RESP_ADDRESS]);
 
-          pairing_list_addr_write(idx, gzp_system_address);
+          //pairing_list_addr_write(idx, gzp_system_address);
+          #ifndef GZP_NV_STORAGE_DISABLE
+          gzp_params_store(false); // "False" indicates that only "system address" part of DB element will be stored
+
+		  uint32_t page_error;
+		  FLASH_EraseInitTypeDef flash_page;
+		  flash_page.TypeErase = FLASH_TYPEERASE_PAGES;
+		  flash_page.PageAddress = 0x0800F800;
+		  flash_page.NbPages = 1;
+		  HAL_FLASHEx_Erase(&flash_page, &page_error);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F800, 0x00ff & gzp_system_address[0]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F802, 0x00ff & gzp_system_address[1]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F804, 0x00ff & gzp_system_address[2]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F806, 0x00ff & gzp_system_address[3]);
+          #endif
           retval = true;
 		  printf("addr resp success @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
         }
@@ -581,12 +609,14 @@ static void gzp_index_db_add(uint8_t val)
   uint8_t temp_val;
 
   // Search for unwritten loacation in index DB
-  for(i = 0; i < GZP_INDEX_DB_SIZE; i++)
+  //for(i = 0; i < GZP_INDEX_DB_SIZE; i++)
+  for(i = 0; i < GZP_INDEX_DB_SIZE; i+=2)		// 16位地址对齐
   {
     temp_val = hal_flash_byte_read(GZP_INDEX_DB_ADR + i);
 
     // Lower nibble
-    if(i != (GZP_INDEX_DB_SIZE - 1))
+    //if(i != (GZP_INDEX_DB_SIZE - 1))
+    if(i != (GZP_INDEX_DB_SIZE - 2))			// 16位地址对齐
     {
       if((temp_val & 0x0f) == 0x0f)
       {
@@ -617,7 +647,8 @@ static uint8_t gzp_index_db_read()
   int16_t i;
 
   // Search for previously written location
-  for(i = (GZP_INDEX_DB_SIZE - 1); i >= 0; i--)
+  //for(i = (GZP_INDEX_DB_SIZE - 1); i >= 0; i--)
+  for(i = (GZP_INDEX_DB_SIZE - 1); i >= 0; i-=2)		//16位地址对齐
   {
     retval = hal_flash_byte_read(GZP_INDEX_DB_ADR + i);
 
@@ -645,7 +676,8 @@ static uint8_t gzp_index_db_read()
 
 static bool gzp_index_db_full()
 {
-  return ((GZP_INDEX_DB_SIZE == 0) || ((hal_flash_byte_read(GZP_INDEX_DB_ADR + (GZP_INDEX_DB_SIZE - 1)) != 0xff)));
+  //return ((GZP_INDEX_DB_SIZE == 0) || ((hal_flash_byte_read(GZP_INDEX_DB_ADR + (GZP_INDEX_DB_SIZE - 1)) != 0xff)));
+  return ((GZP_INDEX_DB_SIZE == 0) || ((hal_flash_byte_read(GZP_INDEX_DB_ADR + (GZP_INDEX_DB_SIZE - 2)) != 0xff)));	 //16位地址对齐
 }
 
 static bool gzp_index_db_empty()
@@ -786,6 +818,8 @@ static bool gzp_params_restore(void)
 {
   uint8_t i;
   uint8_t temp_element[GZP_PARAMS_DB_ELEMENT_SIZE];
+
+  printf("read falsh byte @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
 
   if(!gzp_index_db_full() && !gzp_index_db_empty())
   {

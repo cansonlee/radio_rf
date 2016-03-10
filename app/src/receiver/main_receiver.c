@@ -114,12 +114,12 @@ int main(void)
     /* Configure the system clock */
     SystemClock_Config();
 
-    /* Initialize all configured peripherals */
+    /* Initialize all configured peripherals */	
     MX_GPIO_Init();
+	MX_USART1_UART_Init();
     MX_SPI1_Init();
 	MX_TIM1_Init();
-    MX_TIM3_Init();
-    MX_USART1_UART_Init();
+    MX_TIM3_Init();    
 	
     /* USER CODE BEGIN 2 */
 
@@ -142,7 +142,7 @@ int main(void)
 
     key_init();
 	HAL_JTAG_Set(2);
-    (void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
+    //(void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
     printf("telemetry_init ok .\r\n");
     
     (void)radio_host_init();
@@ -364,7 +364,7 @@ void MX_SPI1_Init(void)
     hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
     hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
     hspi1.Init.NSS = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4; //SPI_BAUDRATEPRESCALER_8;
     hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
     hspi1.Init.TIMode = SPI_TIMODE_DISABLED;
     hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
@@ -395,7 +395,7 @@ void MX_TIM3_Init(void)
     sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
     HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig);
 
-    HAL_NVIC_SetPriority(TIM3_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 1);
+    HAL_NVIC_SetPriority(TIM3_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 2, 1);
     HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
     HAL_TIM_Base_Start_IT(&htim3);
@@ -416,7 +416,7 @@ void MX_TIM1_Init(void)
 
     for (i = 0; i < 16; i++)
     {
-        printf("encoa de ppm chan %02d PWM %04d\r\n", i, ppm_pulse_seqence[i]);
+        printf("encode ppm chan %02d PWM %04d\r\n", i, ppm_pulse_seqence[i]);
     }
 
     printf("ppm_last_low_width %d\r\n", ppm_last_low_width);
@@ -445,13 +445,15 @@ void MX_TIM1_Init(void)
     htim1.Instance->SR &= ~TIM_SR_CC2IF;
     htim1.Instance->DIER |= TIM_DIER_CC2IE;
     htim1.Instance->DIER |= TIM_DIER_UIE;
-    
+
+	HAL_NVIC_SetPriority(TIM1_UP_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 5, 0);
+    HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
+	
     htim1.Instance->CR1 = TIM_CR1_CEN;
 	currentPpmChannel = 0;
-	HAL_GPIO_WritePin(PPM_CH1_PORT, PPM_CH1_PIN, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(PPM_CH1_PORT, PPM_CH1_PIN, GPIO_PIN_SET);    
 
-    HAL_NVIC_SetPriority(TIM1_UP_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1, 0);
-    HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
+	printf("TIM1 init ok!\r\n");
 }
 
 /* USER CODE BEGIN 4 */
@@ -468,11 +470,12 @@ extern uint16_t dbg_rx_period;
 extern uint32_t heartbeat_cnt;
 extern uint8_t gzll_chm_get_current_rx_channel(void);
 
+extern uint32_t test_recv_pak_num;
 void StartDefaultTask(void const * argument)
 {	
     argument = argument;
     /*## FatFS: Link the USER driver ###########################*/
-    retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
+    //retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
 
     /* USER CODE BEGIN 5 */
     osDelay(1);
@@ -491,15 +494,18 @@ void StartDefaultTask(void const * argument)
         printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
         */
 //        printf("hb:%d\r\n", heartbeat_cnt);
-
-		if (KEY0_PRES == key_scan(0))
+		uint8_t key0;
+		key0 = key_scan(0);
+//		printf("key0=%d\r\n", key0);
+		//if (KEY0_PRES == key_scan(0))
+		if(KEY0_PRES == key0)
 		{
 			printf("key 0 pressed, enter pairing status ...\r\n");
 			radio_pairing_status_set(true);
 			//uint8_t resp[5] = {0x55, 0x33, 0x22, 0x66, 0x11};
 			//gzll_ack_payload_write(&resp[0], 5, 0);
 		}
-
+#if 0
 		extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr;
 		uint8_t addr[5];
 		uint8_t temp;
@@ -508,7 +514,9 @@ void StartDefaultTask(void const * argument)
         printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
         printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
 		printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr);
-
+#endif
+		printf("%d\r\n", test_recv_pak_num);
+#if 0
 		temp = hal_nrf_get_address(HAL_NRF_PIPE0, addr);
 		printf("the addr of p0 is:");
 		for(uint8_t i=0; i<5; i++)
@@ -541,8 +549,13 @@ void StartDefaultTask(void const * argument)
 			printf("%#x ", addr[i]);
 		}
 		printf("\r\n");
-		
-		osDelay(1000);
+
+		temp = hal_nrf_read_reg(EN_AA);
+		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", EN_AA, temp, __FILE__, __func__, __LINE__);
+		temp = hal_nrf_read_reg(EN_RXADDR);
+		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", EN_RXADDR, temp, __FILE__, __func__, __LINE__);
+#endif		
+		osDelay(1);
 
     }
 
@@ -575,7 +588,7 @@ void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
     
     if (htim->Instance == TIM1)
     {
-        //printf("T1 UP\r\n");
+        //printf("T1 UP @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
         #if 1
         __HAL_TIM_CLEAR_IT(htim, TIM_SR_UIF);
         htim->Instance->ARR = *p_ppm_pulse_seqence;
@@ -623,6 +636,8 @@ void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim)
             ppm.stop_pulse_width = PPM_STOP_PULSE_WIDTH;
             ppm.valid_chan_num = 8;
             ppm_encoder(&ppm, ppm_pulse_seqence, &dummy);
+
+			//printf("p_ppm_pulse_seqence=0 @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
 
             htim->Instance->CCR2 = dummy;
             

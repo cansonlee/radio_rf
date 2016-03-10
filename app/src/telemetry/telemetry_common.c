@@ -16,15 +16,18 @@ static uint8_t m_uart3_buf;
 
 static USARTIRQFUNC m_pfUSART3IRQHandle = NULL;
 
+osSemaphoreId uart_sema;
+osThreadId uartTaskHandle;
+
+
 void telemetry_uart3_init(uint32_t baudRate);
+void uart_receive_task(void const *argument);
 
 int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRate)
 {
     int32_t ret;
     
     telemetry_uart3_init(baudRate);
-
-	printf("uart3 init ok!\r\n");
 
     if (pfInit != NULL){
         ret = pfInit();
@@ -33,13 +36,25 @@ int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRa
         }
     }
 
-    m_pfUSART3IRQHandle = pfIRQ;
+	m_pfUSART3IRQHandle = pfIRQ;
 
-    HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
-    HAL_NVIC_EnableIRQ(USART3_IRQn);
+	osSemaphoreDef(UART_SEM);
+    uart_sema = osSemaphoreEmptyCreate(osSemaphore(UART_SEM));
+    if (NULL == uart_sema)
+    {
+        printf("[%s, L%d] create semaphore failed ret 0x%x.\r\n",
+            __FILE__, __LINE__, (unsigned int)uart_sema);
+        return -1;
+    }
 
-//    HAL_UART_Receive_IT(&huart3, &m_uart3_buf, 1);
-	telemetry_enable_it();
+    osThreadDef(uartTask, uart_receive_task, osPriorityAboveNormal, 0, 512);
+    uartTaskHandle = osThreadCreate(osThread(uartTask), NULL);
+    if (NULL == uartTaskHandle)
+    {
+        printf("[%s, L%d] create thread failed.\r\n",
+            __FILE__, __LINE__);
+        return -1;
+    }    
 
 	printf("uart3 init ok!\r\n");
     return 0;
@@ -47,12 +62,12 @@ int32_t telemetry_init(USARTINITFUNC pfInit, USARTIRQFUNC pfIRQ, uint32_t baudRa
 
 void telemetry_disable_it(void){
     __HAL_USART_DISABLE_IT(&huart3, UART_IT_RXNE);
-	__HAL_USART_DISABLE_IT(&huart3, USART_IT_IDLE);
+	//__HAL_USART_DISABLE_IT(&huart3, USART_IT_IDLE);
 }
 
 void telemetry_enable_it(void){
     __HAL_USART_ENABLE_IT(&huart3, UART_IT_RXNE);
-	__HAL_USART_ENABLE_IT(&huart3, USART_IT_IDLE);
+	//__HAL_USART_ENABLE_IT(&huart3, USART_IT_IDLE);
 }
 
 void telemetry_transmit(uint8_t *pTxData, uint16_t len, uint32_t timeout){
@@ -91,38 +106,77 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 #endif
 
-uint8_t g_uart3_buf[100];
-uint16_t g_uart3_len;
+#define UART3_BUF_LEN	100
+uint8_t g_uart3_buf[UART3_BUF_LEN];
+uint8_t *p_uart3_in = &g_uart3_buf[0];
+uint8_t *p_uart3_out = &g_uart3_buf[0];
+uint8_t *p_uart3_head = &g_uart3_buf[0];
+uint8_t *p_uart3_tail = &g_uart3_buf[UART3_BUF_LEN -1];
+
 void usart3_irq_handler_callback(void)
 {
-	uint8_t c;
-	uint16_t temp;
+	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+	
     if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) != RESET)
     {
-    	c = huart3.Instance->DR;
-//    	printf("0x%x \r\n", c);
-		g_uart3_buf[g_uart3_len++] = c;
-
-		if(g_uart3_len >= 100)
-			g_uart3_len = 0;
-//		c = huart3.Instance->DR;
-//        printf("0x%x \r\n", c);
-    }
-
-	if (__HAL_UART_GET_FLAG(&huart3, UART_FLAG_IDLE) != RESET)
-	{
-
-		temp = huart3.Instance->DR;
-		temp = huart3.Instance->SR;
-
-		if (m_pfUSART3IRQHandle != NULL){
-			for(uint16_t i=0; i<g_uart3_len; i++)
-			{
-            	m_pfUSART3IRQHandle(g_uart3_buf[i]);
-			}
+    	*p_uart3_in++ = huart3.Instance->DR;
+		if(p_uart3_in > p_uart3_tail){
+			p_uart3_in = p_uart3_head;
 		}
 
-		g_uart3_len = 0;
-	}
+		(void)xSemaphoreGiveFromISR(uart_sema, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
 }
+
+
+void uart_receive_task(void const *argument)
+{	
+	uint8_t len, i;
+	uint8_t uart_buf[UART3_BUF_LEN];
+	uint32_t flag;
+	
+    argument = argument;	
+
+    HAL_NVIC_SetPriority(USART3_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY+3, 0);
+    HAL_NVIC_EnableIRQ(USART3_IRQn);
+
+	telemetry_enable_it();
+    
+    for (;;)
+    {
+        /* waitting for data update notify */
+        (void)osSemaphoreWait(uart_sema, osWaitForever);
+
+		MCU_INTERRUPTS_DISABLE(flag);
+		if(p_uart3_out <= p_uart3_in)
+		{
+			len = p_uart3_in - p_uart3_out;
+			memcpy(uart_buf, p_uart3_out, len);
+		}
+		else
+		{
+			i = p_uart3_tail - p_uart3_out + 1;
+			memcpy(uart_buf, p_uart3_out, i);
+			len = p_uart3_in - p_uart3_head;
+			memcpy(&uart_buf[i], p_uart3_head, len);
+			len += i;			
+		}	
+		p_uart3_out = p_uart3_in;
+		MCU_INTERRUPTS_ENABLE(flag);
+
+		printf("recv in %s, %s, L:%d\r\n", __FILE__, __func__, __LINE__);
+
+		for(i=0; i<len; i++)
+		{
+			m_pfUSART3IRQHandle(uart_buf[i]);
+			printf("%#x ", uart_buf[i]);
+		}
+
+		printf("\r\n");
+		
+
+    }
+}
+
 

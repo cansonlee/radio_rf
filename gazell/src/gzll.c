@@ -86,7 +86,8 @@ static void gzll_set_radio_auto_retries(void);
 /**
   Function for setting the Gazell Link Layer to idle state
 */
-static void gzll_set_system_idle(void);
+//static void gzll_set_system_idle(void);
+ void gzll_set_system_idle(void);
 
 
 /*-----------------------------------------------------------------------------
@@ -1081,7 +1082,8 @@ static void gzll_set_radio_auto_retries()
   }
 }
 
-static void gzll_set_system_idle(void)
+//static void gzll_set_system_idle(void)
+void gzll_set_system_idle(void)
 {
   GZLL_RFCE_LOW();
 
@@ -1105,6 +1107,12 @@ static void gzll_set_system_idle(void)
   gzll_state_var = GZLL_IDLE;
 }
 
+void gzll_set_system_idle_manual(void)
+{
+	gzll_tx_success_f = true;
+	gzll_set_system_idle();
+}
+
 /*-----------------------------------------------------------------------------
   Implementation: Interrupt Service Routines (ISR)
 -----------------------------------------------------------------------------*/
@@ -1112,6 +1120,11 @@ uint32_t dbg_int_max_rt;
 uint32_t dbg_int_tx_ds;
 uint32_t dbg_int_rx_dr;
 uint32_t dbg_tx_retrans;
+uint32_t test_max_rt_to_idle;
+uint32_t test_tx_ds_to_idle;
+uint32_t test_isr_status;
+uint32_t test_zero_status;
+uint32_t test_retrans_times;
 void gzll_radio_isr_function(void)
 {
   #ifndef GZLL_HOST_ONLY
@@ -1120,10 +1133,19 @@ void gzll_radio_isr_function(void)
   uint16_t timer_mod_period, temp;
   #endif
   uint8_t status;
+  extern uint32_t dbg_exit1_int_cnt;
 
+  test_isr_status = 1;
   GZLL_RFCK_ENABLE();
 
-  status = hal_nrf_get_clear_irq_flags();
+  status = hal_nrf_irq_bits_get_n_clear();
+ 
+  if(status == 0)
+	{
+		status = hal_nrf_get_clear_irq_flags();
+		test_zero_status++;
+	}
+  
   //If "received data ready" interrupt from radio
   if(status & ((1<<RX_DR)))
   {
@@ -1195,6 +1217,7 @@ void gzll_radio_isr_function(void)
       */
       if(hal_nrf_tx_fifo_empty())
       {
+      	test_tx_ds_to_idle++;
         gzll_tx_success_f = true;
         gzll_set_system_idle();
       }
@@ -1218,7 +1241,7 @@ void gzll_radio_isr_function(void)
     dbg_int_max_rt++;
     #if 1
     GZLL_RFCE_LOW();
-
+	test_retrans_times += tries;
     gzll_timeout_counter += tries;
     temp = gzll_dyn_params[GZLL_PARAM_TX_TIMEOUT];
 
@@ -1228,10 +1251,12 @@ void gzll_radio_isr_function(void)
     if((temp != 0 && gzll_timeout_counter >= temp) ||
       gzll_pending_goto_idle)
     {
+      test_max_rt_to_idle++;
       gzll_set_system_idle();
     }
     else
     {
+    	
       // If tries per channel has elapsed
       if(gzll_tries_pr_channel_counter == 0)
       {
@@ -1271,6 +1296,7 @@ void gzll_radio_isr_function(void)
   #endif
 
   GZLL_RFCK_DISABLE();
+  test_isr_status = 0;
 }
 
 uint8_t dbg_irq_flag;
@@ -1510,6 +1536,16 @@ static void gzll_set_radio_power_on(bool on)
   }
 }
 
+
+uint16_t gzll_timeout_counter_get(void)
+{
+	return gzll_timeout_counter;
+}
+
+uint16_t gzll_dyn_params_get(void)
+{
+	return gzll_dyn_params[GZLL_PARAM_TX_TIMEOUT];
+}
 /**
 @}
 */

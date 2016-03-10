@@ -5,6 +5,8 @@
 #include "cmsis_os.h"
 #include <common/mavlink.h>
 #include "telemetry.h"
+#include "telemetry_common.h"
+
 
 extern uint32_t timer_1ms;
 
@@ -91,6 +93,16 @@ int32_t telemetry_receiver_init(void)
             __FILE__, __LINE__, (unsigned int)telemetry_sema);
         return -1;
     }
+	
+	osThreadDef(telemetryTask, telemetry_process_task, osPriorityNormal, 0, 512);
+    telemetryTaskHandle = osThreadCreate(osThread(telemetryTask), NULL);
+    if (NULL == telemetryTaskHandle)
+    {
+        printf("[%s, L%d] create thread failed.\r\n",
+            __FILE__, __LINE__);
+        return -1;
+    }
+	
 
     return 0;
 }
@@ -125,7 +137,8 @@ void telemetry_mavlink_proc(uint8_t c)
                 {
                     request_send = true;
                 }
-                (void)osSemaphoreReleaseFromISR(telemetry_sema);
+                //(void)osSemaphoreReleaseFromISR(telemetry_sema);
+                (void)osSemaphoreRelease(telemetry_sema);
             }
             break;
             case MAVLINK_MSG_ID_SYS_STATUS:
@@ -207,21 +220,23 @@ void telemetry_data_encode_unlock(void){
 
 uint8_t telemetry_data_encode(void* out_buf){
     uint8_t len = 0;
-
+	uint32_t flag;
+	
+	//MCU_INTERRUPTS_DISABLE(flag);
     len += telemetry_push_data(&out_buf, telemetry_push_mode);       // 2 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_throttle);   // 1 Byte
     len += telemetry_push_data(&out_buf, telemetry_push_rssi);       // 1 Byte
     len += telemetry_push_data(&out_buf, telemetry_push_gps_status); // 2 Bytes
 
     // need protect
-    telemetry_data_encode_lock();
+    //telemetry_data_encode_lock();
     len += telemetry_push_data(&out_buf, telemetry_push_volt_cur);   // 5 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_attitude);   // 8 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_heading);    // 2 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_alt);        // 4 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_distance);   // 2 Bytes
-    telemetry_data_encode_unlock();
-
+    //telemetry_data_encode_unlock();
+	//MCU_INTERRUPTS_ENABLE(flag);
     return len;
 }
 
@@ -383,10 +398,11 @@ void telemetry_process_task(void const *argument)
     uint32_t i;
     argument = argument;
 
-    telemetry_enable_it();
+    //telemetry_enable_it();
     
     for (;;)
     {
+    	printf("enter in %s, %s, L:%d\r\n", __FILE__, __func__, __LINE__);
         /* waitting for data update notify */
         (void)osSemaphoreWait(telemetry_sema, osWaitForever);
 

@@ -4,9 +4,12 @@
 
 #include "stm32f1xx_hal.h"
 
+#include "cmsis_os.h"
 
 #include "comm_protocol.h"
 #include "telemetry_transmitter.h"
+#include "telemetry_common.h"
+
 
 
 
@@ -21,8 +24,7 @@ void comm_protocol_parsed_hook(comm_message_t* msg);
 void comm_protocol_parsed_hook(comm_message_t* msg){
     switch(msg->msgid){
         case COMM_MSG_DO_PAIR:
-            comm_pair_rx_num = msg->payload[0];
-			//printf("rx_num from main is:%d @ %s, %s, L%d\r\n", comm_pair_rx_num, __FILE__, __func__, __LINE__);
+            comm_pair_rx_num = msg->payload[0];			
             comm_working_mode = msg->payload[1];
         break;
         case COMM_MSG_SEND_CHANNELS:
@@ -41,23 +43,29 @@ void telemetry_comm_proc(uint8_t c){
     comm_protocol_parse(c, comm_protocol_parsed_hook);
 }
 
-uint8_t telemetry_rxnum_get(void){
+uint8_t telemetry_rxnum_get(void){	
     return comm_pair_rx_num;
 }
 
 uint8_t telemetry_transmitter_mode_get(void){
-    return comm_working_mode;
+	return comm_working_mode;
 }
 
 void telemetry_transmitter_channel_get(uint8_t *addr, uint8_t len)
 {
+	uint32_t flag;
     if (len > COMM_CHANNEL_VALUES_LENGTH){
         memset(addr, 0, len);
 
         len = COMM_CHANNEL_VALUES_LENGTH;
     }
-    
+
+#if 0	
+	MCU_INTERRUPTS_DISABLE(flag);	
     memcpy(addr, comm_channel_values, len);
+	MCU_INTERRUPTS_ENABLE(flag);
+#endif
+	memset(addr, 5, len);
 }
 
 void telemetry_radio_ack_send(void* buf, uint8_t len){
