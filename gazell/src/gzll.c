@@ -356,7 +356,12 @@ void gzll_init(void)
   temp_adr[0] = GZLL_DEFAULT_ADDRESS_PIPE5;
   hal_nrf_set_address(HAL_NRF_PIPE5, temp_adr);
 
-  /*
+  for(uint8_t i=0; i<6; i++)
+	{
+		hal_nrf_open_pipe((hal_nrf_address_t)i, EN_AA);
+	}
+
+  /*s
   Set up default channel.
   */
   hal_nrf_set_rf_channel(gzll_channel_tab[gzll_channel_tab_index]);

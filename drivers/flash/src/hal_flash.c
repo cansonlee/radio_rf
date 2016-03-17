@@ -2,11 +2,7 @@
 
 uint8_t hal_flash_byte_read(uint32_t a)
 {
-	uint8_t rev;
-	rev = *(uint8_t *)a;
-	printf("read byte addr=%#x ,rev=%#x @ %s, %s, %d\r\n", a, rev, __FILE__, __func__, __LINE__);
-    //return *(uint8_t *)a;
-    return rev;
+    return *(uint8_t *)a;
 }
 
 void hal_flash_bytes_read(uint32_t a, uint8_t *p, uint16_t n)
@@ -34,7 +30,6 @@ void hal_flash_byte_write(uint32_t a, uint8_t b)
 	uint16_t data;
 
 	data = b & 0x00ff;
-	printf("write byte addr=%#x, data=%#x @ %s, %s, %d\r\n", a, data, __FILE__, __func__, __LINE__);
 	HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, a, data);
 }
 

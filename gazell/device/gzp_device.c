@@ -222,14 +222,6 @@ void gzp_init()
   gzp_system_address[2] = *(uint8_t *)0x0800F804;
   gzp_system_address[3] = *(uint8_t *)0x0800F806;
 
-  if(gzp_system_address[0] = 0xff)
-  {
-  	printf("system addr read from flash fail!\r\n");
-	gzp_system_address[0] = 0x57;
-	gzp_system_address[1] = 0xff;
-	gzp_system_address[2] = 0x73;
-	gzp_system_address[3] = 0x06;
-  }
 #endif
 
   // Update radio parameters from gzp_system_address
@@ -268,7 +260,6 @@ bool gzp_address_req_send(uint8_t idx)
     {
       if(!gzp_tx_packet(address_req, GZP_CMD_HOST_ADDRESS_REQ_PAYLOAD_LENGTH, 0))
       {
-      	//printf("send packet fail @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
         break;
       }
     }
@@ -277,10 +268,8 @@ bool gzp_address_req_send(uint8_t idx)
 
     // Send message for fetching pairing response from host.
     address_req[0] = GZP_CMD_HOST_ADDRESS_FETCH;
-	//printf("before fetch host addr @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
     if(gzp_tx_packet(&address_req[0], GZP_CMD_HOST_ADDRESS_REQ_PAYLOAD_LENGTH, 0))
     {
-      //printf("fetch host addr package send successful @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
       // If pairing response received
       if(gzll_rx_fifo_read(rx_payload, NULL, NULL))
       {
@@ -299,11 +288,12 @@ bool gzp_address_req_send(uint8_t idx)
 		  flash_page.TypeErase = FLASH_TYPEERASE_PAGES;
 		  flash_page.PageAddress = 0x0800F800;
 		  flash_page.NbPages = 1;
+		  HAL_FLASH_Unlock();
 		  HAL_FLASHEx_Erase(&flash_page, &page_error);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F800, 0x00ff & gzp_system_address[0]);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F802, 0x00ff & gzp_system_address[1]);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F804, 0x00ff & gzp_system_address[2]);
-		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F806, 0x00ff & gzp_system_address[3]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F800, gzp_system_address[0]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F802, gzp_system_address[1]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F804, gzp_system_address[2]);
+		  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, 0x0800F806, gzp_system_address[3]);
           #endif
           retval = true;
 		  printf("addr resp success @ %s, %s, %d\r\n", __FILE__, __func__, __LINE__);
@@ -595,12 +585,12 @@ bool gzp_get_host_id(uint8_t * dst_id)
 
 static void gzp_params_db_add(const uint8_t* src_element, uint8_t index)
 {
-  hal_flash_bytes_write(GZP_PARAMS_DB_ADR + (index * GZP_PARAMS_DB_ELEMENT_SIZE), src_element, GZP_PARAMS_DB_ELEMENT_SIZE);
+  hal_flash_bytes_write(GZP_PARAMS_DB_ADR + (index * GZP_PARAMS_DB_ELEMENT_SIZE), src_element, GZP_PARAMS_DB_ELEMENT_SIZE/2);
 }
 
 static void gzp_params_db_read(uint8_t* dst_element, uint8_t index)
 {
-  hal_flash_bytes_read(GZP_PARAMS_DB_ADR + (index * GZP_PARAMS_DB_ELEMENT_SIZE), dst_element, GZP_PARAMS_DB_ELEMENT_SIZE);
+  hal_flash_bytes_read(GZP_PARAMS_DB_ADR + (index * GZP_PARAMS_DB_ELEMENT_SIZE), dst_element, GZP_PARAMS_DB_ELEMENT_SIZE/2);
 }
 
 static void gzp_index_db_add(uint8_t val)

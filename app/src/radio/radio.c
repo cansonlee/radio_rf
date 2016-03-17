@@ -32,11 +32,16 @@ static uint8_t ack_pload[RF_PAYLOAD_LENGTH];
 
 //static uint8_t content[RF_PAYLOAD_LENGTH + 1] = "Hello, world!1234567890qwertyuiop";
 
+static bool g_tx_pairing_enable = ENABLE;
+
 osSemaphoreId radio_sema;
 osThreadId radioTaskHandle;
 
 bool radio_pairing_status_get(void);
 void print_test(void* buf);
+void radio_tx_pairing_enable(bool enable);
+bool radio_tx_pairing_usable_get(void);
+
 
 
 uint8_t radio_get_pload_byte (uint8_t byte_index)
@@ -52,6 +57,16 @@ void radio_get_pload (uint8_t *pload_out)
 void radio_active(void)
 {
     (void)osSemaphoreReleaseFromISR(radio_sema);
+}
+
+void radio_tx_pairing_enable(bool enable)
+{
+	g_tx_pairing_enable = enable;
+}
+
+bool radio_tx_pairing_usable_get(void)
+{
+	return g_tx_pairing_enable;
 }
 
 
@@ -91,31 +106,30 @@ int32_t radio_device_init(void)
 bool pairing_ok = false;
 extern void gzll_set_system_idle(void);
 extern void gzll_set_system_idle_manual(void);
+
+uint32_t test_total_tx=0;
+uint32_t test_total_ack=0;
 void radio_device_task(void const *argument)
 {
     bool pairing_ret;
     uint8_t rx_num;
     uint8_t rx_num_last = 0xff;
     uint8_t radio_data_rx_addr[GZP_SYSTEM_ADDRESS_WIDTH];
+	uint8_t addr[5];
+	uint8_t pairing_status = 0xff;
+	
     argument = argument;
-	uint32_t test_total_tx=0;
-	uint32_t test_success_tx=0;
-	uint32_t test_fail_tx=0;
-	uint32_t test_ack_num=0;
-	uint32_t test_last_success_tx=0;
-	uint32_t test_out_idle_times=0;
-	uint32_t flag;
-	uint32_t test_free_stack_space = 0;
 
     gzll_init();
-	printf("gzll init over!\r\n");
     gzp_init();
 	printf("gzp init over!\r\n");
+
+	radio_tx_pairing_enable(true);
 
     for(;;)
     {
         /* waitting for data update notify */
-        //(void)osSemaphoreWait(radio_sema, osWaitForever);
+        (void)osSemaphoreWait(radio_sema, osWaitForever);
 	
 #if 0
         rx_num = telemetry_rxnum_get();
@@ -135,6 +149,11 @@ void radio_device_task(void const *argument)
 #endif
         if (telemetry_transmitter_mode_get() == TRANSMITTING_MODE_BINDING)
         {
+        	if(!radio_tx_pairing_usable_get())
+    		{
+    			continue;
+    		}
+			
             osDelay(100);
             pairing_ret = gzp_address_req_send(rx_num);
             if (pairing_ret)
@@ -142,6 +161,7 @@ void radio_device_task(void const *argument)
                 printf("pairing success(%02x%02x%02x%02x)!\r\n",
                     gzp_system_address[0], gzp_system_address[1],
                     gzp_system_address[2], gzp_system_address[3]);
+				radio_tx_pairing_enable(false);
             }
             else
             {
@@ -150,12 +170,13 @@ void radio_device_task(void const *argument)
         }
         else
         {       
+        	radio_tx_pairing_enable(true);
+			
             if (gzll_rx_fifo_read(ack_pload, NULL, NULL))
             {                    	
                 //print_test(ack_pload);
-                //telemetry_radio_ack_send(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH);
-                
-				test_ack_num++;
+                test_total_ack++;
+                telemetry_radio_ack_send(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH);
             }
 
 			if((gzll_get_state() != GZLL_IDLE) && ( hal_nrf_tx_fifo_empty()))
@@ -169,43 +190,14 @@ void radio_device_task(void const *argument)
 
                 if (gzll_tx_data(pload, GZLL_MAX_FW_PAYLOAD_LENGTH, 2))
                 {		
-
+					test_total_tx++;
                 }
                 else
                 {
                     //printf("call gzll_tx_data failed! %d\r\n",test_fail_tx);
                 }		
             }
-			//debug
-			else
-			{
-#if 0			
-				test_free_stack_space = uxTaskGetStackHighWaterMark(radioTaskHandle);
-				extern uint16_t gzll_timeout_counter_get(void);
-				extern uint16_t gzll_dyn_params_get(void);
-				extern uint32_t timer_1ms;
-				printf("tx timeout val=%d, gzll_timeout_counter=%d,timer_1ms=%d, gzll_get_state != GZLL_IDLE @ %s, %s, L%d\r\n", gzll_dyn_params_get(), gzll_timeout_counter_get(), timer_1ms, __FILE__, __func__, __LINE__);
-				extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr,test_max_rt_to_idle,test_tx_ds_to_idle,dbg_exit1_int_cnt,test_exti0_times;
-		        printf("dbg_tx_retrans=%d \r\n", dbg_tx_retrans);
-		        printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
-		        printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
-				printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr); 
-				printf("test_max_rt_to_idle=%d\r\n", test_max_rt_to_idle); 
-				printf("test_tx_ds_to_idle=%d\r\n", test_tx_ds_to_idle); 
-				printf("test_total_tx=%d\r\n", test_total_tx);
-				printf("test_success_tx=%d\r\n", test_success_tx);
-				printf("test_fail_tx=%d\r\n", test_fail_tx);				
-				printf("test_ack_num=%d\r\n", test_ack_num);				
-				printf("test_free_stack_space=%d\r\n", test_free_stack_space);
-				printf("SPI1->SR=%#x\r\n", SPI1->SR);
-				printf("rx-e:%d, rx-f:%d, tx-e:%d, tx-f:%d\r\n", hal_nrf_rx_fifo_empty(), hal_nrf_rx_fifo_full(), hal_nrf_tx_fifo_empty(),hal_nrf_tx_fifo_full());
-			
-				extern uint32_t test_zero_status;
-				printf("status=%#x, INT times=%d\r\n", test_zero_status, dbg_exit1_int_cnt);
-#endif					
-			}
         }
-		osDelay(1);
     }
 }
 #endif
@@ -213,7 +205,7 @@ void radio_device_task(void const *argument)
 #ifndef GZLL_DEVICE_ONLY
 int32_t radio_host_init(void)
 {
-    osThreadDef(radioTask, radio_host_task, osPriorityAboveNormal, 0, 2048);
+    osThreadDef(radioTask, radio_host_task, osPriorityAboveNormal, 0, 256);
     radioTaskHandle = osThreadCreate(osThread(radioTask), NULL);
     if (NULL == radioTaskHandle)
     {
@@ -240,6 +232,8 @@ void radio_pairing_status_set(bool status)
 uint32_t test_recv_pak_num = 0;
 void radio_host_task(void const * argument)
 {   
+   uint8_t addr[5];
+   uint8_t temp;
    argument = argument;
 
     gzll_init();
@@ -248,6 +242,17 @@ void radio_host_task(void const * argument)
     gzll_set_param(GZLL_PARAM_RX_PIPES, gzll_get_param(GZLL_PARAM_RX_PIPES) | (1 << 2));
 	
     gzll_rx_start();
+
+	hal_nrf_get_address(HAL_NRF_PIPE1, addr);
+	printf("HAL_NRF_PIPE1 addr is:");
+	for(uint8_t i=0; i<5; i++)
+	{
+		printf("%#x ", addr[i]);
+	}
+	printf("\r\n");
+
+	temp=hal_nrf_get_address(HAL_NRF_PIPE2, addr);
+	printf("HAL_NRF_PIPE2 addr is: %#x\r\n", addr[0]);
 	
     for (;;)
     {		

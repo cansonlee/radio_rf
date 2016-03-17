@@ -113,22 +113,10 @@ int main(void)
 
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
+	MX_USART1_UART_Init();
     MX_SPI1_Init();
     pcm_decoder_init();
-    MX_TIM3_Init();
-    MX_USART1_UART_Init();
-
-	/* MCO */
-	GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pin = GPIO_PIN_8;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-	RCC->CFGR &= ~RCC_CFGR_MCO;
-	RCC->CFGR |= RCC_CFGR_MCO_PLLCLK_DIV2;
-	printf("RCC->CR=%#x, RCC->CFGR=%#x, RCC->APB1ENR=%#x @ %s, %s, %d\r\n", RCC->CR,RCC->CFGR,RCC->APB1ENR, __FILE__, __func__, __LINE__);
+    MX_TIM3_Init();    
 
     /* USER CODE BEGIN 2 */
 
@@ -149,7 +137,7 @@ int main(void)
 //    key_init();		//no need for transmiter--leon
     __enable_irq();
 
-    //telemetry_init(NULL, telemetry_comm_proc, 115200);
+    telemetry_init(NULL, telemetry_comm_proc, 115200);
     printf("telemetry_init ok .\r\n");
     
     (void)radio_device_init();
@@ -249,22 +237,6 @@ void MX_GPIO_Init(void)
     HAL_GPIO_WritePin(HEART_BEAT_PORT, HEART_BEAT_PIN, GPIO_PIN_SET);
 
     HAL_GPIO_WritePin(SPORT_ON_PORT, SPORT_ON_PIN, GPIO_PIN_SET);		//默认SPORT接口为发送状态
-
-#if 0
-	/* SPORT_TX_PIN */
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;		//UART3_TX
-    GPIO_InitStruct.Pin = SPORT_TX_PIN;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(SPORT_TR_PORT, &GPIO_InitStruct);
-
-	/* SPORT_RX_PIN */
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_INPUT;		//UART3_RX
-    GPIO_InitStruct.Pin = SPORT_RX_PIN;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(SPORT_TR_PORT, &GPIO_InitStruct);
-#endif	
     
     /* NRF_IRQ */
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -393,61 +365,26 @@ void MX_TIM3_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-extern uint32_t dbg_tim3_int_cnt;
-extern uint32_t dbg_exit1_int_cnt;
-extern uint32_t dbg_int_max_rt;
-extern uint32_t dbg_int_rx_dr;
-extern uint32_t dbg_int_tx_ds;
-extern uint8_t  dbg_irq_flag;
-extern uint16_t dbg_rx_period;
-extern uint32_t dbg_tx_retrans;
-extern bool volatile gzll_sync_on;
-extern uint8_t gzp_system_address[4];
-extern bool pairing_ok;
-extern uint8_t gzll_chm_get_current_rx_channel(void);
-
-uint8_t menu_idx;
 extern uint32_t test_retrans_times;
+
 void StartDefaultTask(void const * argument)
-{
-    uint16_t id = 0;
-	extern void radio_active(void);
-	
-	
+{   
+	uint8_t addr[5];
     argument = argument;
-    uint8_t test_addr[4] = {0x33, 0x44, 0x55, 0x66};
     /*## FatFS: Link the USER driver ###########################*/
     //retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
 
     /* USER CODE BEGIN 5 */
     osDelay(1);
 
-//    LCD_Init();
-//    LCD_Clear(BLUE);
-
-//    POINT_COLOR=RED;
-//    LCD_ShowString(30,40,200,24,24,"Mini STM32 ^_^");    
-
-    /* enable TIM2 capture interrupt */
-    //HAL_NVIC_EnableIRQ(TIM2_IRQn);
-    //HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-
     /* Infinite loop */
     for(;;)
     {
-        osDelay(1);
+        //osDelay(1000);
        // HAL_GPIO_TogglePin(HEART_BEAT_PORT, HEART_BEAT_PIN);
-       //radio_active();
        
-       printf("test_retrans_times=%d \r\n", test_retrans_times);
-#if 0
-		extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr;
-        printf("dbg_tx_retrans=%d \r\n", dbg_tx_retrans);
-        printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
-        printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
-		printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr); 
-		printf("rx-e:%d, rx-f:%d, tx-e:%d, tx-f:%d\r\n", hal_nrf_rx_fifo_empty(), hal_nrf_rx_fifo_full(), hal_nrf_tx_fifo_empty(),hal_nrf_tx_fifo_full());
-#endif		
+       	printf("%d\r\n", test_retrans_times);
+	   
     }
 
     /* USER CODE END 5 */ 

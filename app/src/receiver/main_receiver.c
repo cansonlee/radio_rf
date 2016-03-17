@@ -142,7 +142,7 @@ int main(void)
 
     key_init();
 	HAL_JTAG_Set(2);
-    //(void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
+    (void)telemetry_init(telemetry_receiver_init, telemetry_mavlink_proc, 57600);
     printf("telemetry_init ok .\r\n");
     
     (void)radio_host_init();
@@ -473,6 +473,8 @@ extern uint8_t gzll_chm_get_current_rx_channel(void);
 extern uint32_t test_recv_pak_num;
 void StartDefaultTask(void const * argument)
 {	
+	uint8_t temp;
+	uint8_t addr[5];
     argument = argument;
     /*## FatFS: Link the USER driver ###########################*/
     //retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
@@ -486,76 +488,17 @@ void StartDefaultTask(void const * argument)
 //        osDelay(1000);
 //        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
 
-        /*
-        printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d\r\n", 
-        dbg_exit1_int_cnt, dbg_tim3_int_cnt, dbg_int_max_rt, dbg_int_tx_ds,
-        dbg_int_rx_dr, dbg_irq_flag, gzll_chm_get_current_rx_channel());
-
-        printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
-        */
-//        printf("hb:%d\r\n", heartbeat_cnt);
-		uint8_t key0;
-		key0 = key_scan(0);
-//		printf("key0=%d\r\n", key0);
-		//if (KEY0_PRES == key_scan(0))
-		if(KEY0_PRES == key0)
+		if (KEY0_PRES == key_scan(0))
 		{
 			printf("key 0 pressed, enter pairing status ...\r\n");
 			radio_pairing_status_set(true);
 			//uint8_t resp[5] = {0x55, 0x33, 0x22, 0x66, 0x11};
 			//gzll_ack_payload_write(&resp[0], 5, 0);
 		}
-#if 0
-		extern uint32_t dbg_tx_retrans,dbg_int_max_rt,dbg_int_tx_ds,dbg_int_rx_dr;
-		uint8_t addr[5];
-		uint8_t temp;
+
+		printf("%d\r\n", test_recv_pak_num);		
 		
-        printf("dbg_tx_retrans=%d \r\n", dbg_tx_retrans);
-        printf("dbg_int_max_rt=%d \r\n", dbg_int_max_rt);
-        printf("dbg_int_tx_ds=%d\r\n", dbg_int_tx_ds);  
-		printf("dbg_int_rx_dr=%d\r\n", dbg_int_rx_dr);
-#endif
-		printf("%d\r\n", test_recv_pak_num);
-#if 0
-		temp = hal_nrf_get_address(HAL_NRF_PIPE0, addr);
-		printf("the addr of p0 is:");
-		for(uint8_t i=0; i<5; i++)
-		{
-			printf("%#x ", addr[i]);
-		}
-		printf("\r\n");
-
-		hal_nrf_get_address(HAL_NRF_PIPE1, addr);
-		printf("the addr of p1 is:");
-		for(uint8_t i=0; i<5; i++)
-		{
-			printf("%#x ", addr[i]);
-		}
-		printf("\r\n");
-		
-		temp = hal_nrf_read_reg(RX_ADDR_P2);
-		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P2, temp, __FILE__, __func__, __LINE__);
-		temp = hal_nrf_read_reg(RX_ADDR_P3);
-		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P3, temp, __FILE__, __func__, __LINE__);
-		temp = hal_nrf_read_reg(RX_ADDR_P4);
-		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P4, temp, __FILE__, __func__, __LINE__);
-		temp = hal_nrf_read_reg(RX_ADDR_P5);
-		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", RX_ADDR_P5, temp, __FILE__, __func__, __LINE__);
-
-		hal_nrf_get_address(HAL_NRF_TX, addr);
-		printf("the addr of tx is:");
-		for(uint8_t i=0; i<5; i++)
-		{
-			printf("%#x ", addr[i]);
-		}
-		printf("\r\n");
-
-		temp = hal_nrf_read_reg(EN_AA);
-		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", EN_AA, temp, __FILE__, __func__, __LINE__);
-		temp = hal_nrf_read_reg(EN_RXADDR);
-		printf("read reg:%#x, val:%#x @ %s, %s, %d\r\n", EN_RXADDR, temp, __FILE__, __func__, __LINE__);
-#endif		
-		osDelay(1);
+		//osDelay(1000);
 
     }
 

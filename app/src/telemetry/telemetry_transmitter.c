@@ -53,19 +53,17 @@ uint8_t telemetry_transmitter_mode_get(void){
 
 void telemetry_transmitter_channel_get(uint8_t *addr, uint8_t len)
 {
-	uint32_t flag;
     if (len > COMM_CHANNEL_VALUES_LENGTH){
         memset(addr, 0, len);
 
         len = COMM_CHANNEL_VALUES_LENGTH;
     }
 
-#if 0	
-	MCU_INTERRUPTS_DISABLE(flag);	
+
+	taskENTER_CRITICAL();	
     memcpy(addr, comm_channel_values, len);
-	MCU_INTERRUPTS_ENABLE(flag);
-#endif
-	memset(addr, 5, len);
+	taskEXIT_CRITICAL();
+
 }
 
 void telemetry_radio_ack_send(void* buf, uint8_t len){

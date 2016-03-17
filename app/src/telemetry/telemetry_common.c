@@ -91,21 +91,6 @@ void telemetry_uart3_init(uint32_t baudRate)
     return;
 }
 
-#if 0
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	printf("enter %d\r\n", __LINE__);
-	
-    if (huart->Instance == USART3){
-//        if (m_pfUSART3IRQHandle != NULL){
-//            m_pfUSART3IRQHandle(huart->pRxBuffPtr[0]);
-//        }  
-		printf("recv %x\r\n", huart->pRxBuffPtr[0]);
-//		UART_Receive_IT(&huart);
-    }
-}
-#endif
-
 #define UART3_BUF_LEN	100
 uint8_t g_uart3_buf[UART3_BUF_LEN];
 uint8_t *p_uart3_in = &g_uart3_buf[0];
@@ -148,7 +133,7 @@ void uart_receive_task(void const *argument)
         /* waitting for data update notify */
         (void)osSemaphoreWait(uart_sema, osWaitForever);
 
-		MCU_INTERRUPTS_DISABLE(flag);
+		taskENTER_CRITICAL();
 		if(p_uart3_out <= p_uart3_in)
 		{
 			len = p_uart3_in - p_uart3_out;
@@ -163,17 +148,17 @@ void uart_receive_task(void const *argument)
 			len += i;			
 		}	
 		p_uart3_out = p_uart3_in;
-		MCU_INTERRUPTS_ENABLE(flag);
+		taskEXIT_CRITICAL();
 
-		printf("recv in %s, %s, L:%d\r\n", __FILE__, __func__, __LINE__);
+		//printf("recv in %s, %s, L:%d\r\n", __FILE__, __func__, __LINE__);
 
 		for(i=0; i<len; i++)
 		{
 			m_pfUSART3IRQHandle(uart_buf[i]);
-			printf("%#x ", uart_buf[i]);
+			//printf("%#x ", uart_buf[i]);
 		}
 
-		printf("\r\n");
+		//printf("\r\n");
 		
 
     }

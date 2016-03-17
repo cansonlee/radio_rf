@@ -222,7 +222,7 @@ uint8_t telemetry_data_encode(void* out_buf){
     uint8_t len = 0;
 	uint32_t flag;
 	
-	//MCU_INTERRUPTS_DISABLE(flag);
+	taskENTER_CRITICAL();
     len += telemetry_push_data(&out_buf, telemetry_push_mode);       // 2 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_throttle);   // 1 Byte
     len += telemetry_push_data(&out_buf, telemetry_push_rssi);       // 1 Byte
@@ -236,7 +236,7 @@ uint8_t telemetry_data_encode(void* out_buf){
     len += telemetry_push_data(&out_buf, telemetry_push_alt);        // 4 Bytes
     len += telemetry_push_data(&out_buf, telemetry_push_distance);   // 2 Bytes
     //telemetry_data_encode_unlock();
-	//MCU_INTERRUPTS_ENABLE(flag);
+	taskEXIT_CRITICAL();
     return len;
 }
 
@@ -402,7 +402,6 @@ void telemetry_process_task(void const *argument)
     
     for (;;)
     {
-    	printf("enter in %s, %s, L:%d\r\n", __FILE__, __func__, __LINE__);
         /* waitting for data update notify */
         (void)osSemaphoreWait(telemetry_sema, osWaitForever);
 

@@ -113,7 +113,7 @@ void gzp_init()
   // are used as system address
   gzp_host_chip_id_read(gzp_host_system_address, GZP_SYSTEM_ADDRESS_WIDTH);
 
-  printf("host chip id:%02x%02x%02x%02x. \r\n", gzp_host_system_address[0], 
+  printf("host addr is:%#x %#x %#x %#x. \r\n", gzp_host_system_address[0], 
     gzp_host_system_address[1], gzp_host_system_address[2], 
     gzp_host_system_address[3]);
   
